@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ラベル印刷ツール</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+    background: #f0f2f5;
+    color: #222;
+    min-height: 100vh;
+  }
+
+  /* ===== コントロールパネル ===== */
+  #control-panel {
+    background: #ffffff;
+    border-bottom: 2px solid #e0e4ea;
+    padding: 16px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+  }
+
+  .panel-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #e94560;
+    letter-spacing: 0.05em;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .control-group label {
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  .control-group input, .control-group select {
+    background: #f7f8fa;
+    border: 1px solid #cdd0d6;
+    color: #222;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .control-group input::placeholder, .control-group select::placeholder {
+    color: #bbb;
+    font-style: italic;
+  }
+
+  .control-group input:focus {
+    border-color: #e94560;
+    background: #fff;
+  }
+
+  .btn {
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-fill {
+    width: 100%;
+  }
+
+  .btn-fill {
+    background: #e94560;
+    color: white;
+  }
+  .btn-fill:hover { background: #c73652; }
+
+  .btn-danger {
+    background: #fff0f2;
+    color: #c0253a;
+    border: 1px solid #f0c0c8;
+  }
+  .btn-danger:hover { background: #ffe0e5; }
+
+  .btn-clear {
+    background: #f2f3f5;
+    color: #555;
+    border: 1px solid #ddd;
+  }
+  .btn-clear:hover { background: #e5e7ea; }
+
+  .btn-update {
+    background: #f0f6ff;
+    color: #1a6abf;
+    border: 1px solid #bbd4f5;
+  }
+  .btn-update:hover { background: #ddeeff; }
+
+  .btn-print {
+    background: #0f9b58;
+    color: white;
+    padding: 8px 22px;
+  }
+  .btn-print:hover { background: #0d8a4e; }
+
+  .panel-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    color: #999;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .control-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+  }
+
+  .hint {
+    font-size: 10px;
+    color: #aaa;
+    margin-top: 2px;
+    display: block;
+    line-height: 1.4;
+  }
+
+  /* ボタンをグループ化するセパレータ */
+  .btn-separator {
+    width: 1px;
+    height: 28px;
+    background: #ddd;
+    align-self: center;
+  }
+
+  .btn-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .tips-box {
+    width: 100%;
+    background: #f7f8fa;
+    border: 1px solid #e0e4ea;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .tip-item {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.5;
+  }
+
+  .tip-item strong {
+    color: #444;
+  }
+
+  /* ===== メインレイアウト ===== */
+  #app-layout {
+    display: flex;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  #control-panel {
+    background: #ffffff;
+    border-right: 2px solid #e0e4ea;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 240px;
+    min-width: 240px;
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+  /* ===== ラベルプレビューエリア ===== */
+  #preview-area {
+    padding: 24px;
+    overflow-x: auto;
+    flex: 1;
+  }
+
+  #page-wrapper {
+    background: white;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding-top: 19.5mm;
+    padding-left: 13mm;
+    padding-right: 21mm;
+    padding-bottom: 5.2mm;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  #label-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 23.2mm);
+    grid-template-rows: repeat(23, 8mm);
+    column-gap: 3.2mm;
+    row-gap: 3.1mm;
+    width: 181.6mm;
+  }
+
+  #grid-wrapper {
+    display: grid;
+    grid-template-columns: 5mm auto;
+    grid-template-rows: 4mm auto;
+    gap: 1mm;
+  }
+
+  #corner { /* 左上の空白 */ }
+
+  #col-numbers {
+    display: grid;
+    grid-template-columns: repeat(7, 23.2mm);
+    column-gap: 3.2mm;
+  }
+
+  .col-num {
+    height: 4mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5pt;
+    font-family: Arial, sans-serif;
+    color: #aaa;
+  }
+
+  #row-numbers {
+    display: flex;
+    flex-direction: column;
+    gap: 3.1mm;
+    padding-top: 0;
+  }
+
+  .row-num {
+    height: 8mm;
+    width: 5mm;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    font-size: 5pt;
+    font-family: Arial, sans-serif;
+    color: #aaa;
+    line-height: 1;
+  }
+
+  /* ===== セル ===== */
+  .label-cell {
+    width: 23.2mm;
+    height: 8mm;
+    border: 0.3px dashed #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6pt;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: background 0.1s;
+  }
+
+
+  .label-cell textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    text-align: center;
+    font-size: 6pt;
+    font-family: Arial, sans-serif;
+    padding: 0 1px;
+    cursor: text;
+    resize: none;
+    overflow: hidden;
+    line-height: 1.3;
+  }
+
+  .label-cell.selected {
+    background: rgba(233, 69, 96, 0.15);
+    border-color: #e94560;
+  }
+
+  .label-cell.drag-selected {
+    background: rgba(255, 200, 0, 0.35);
+    border-color: #f0a500;
+    border-width: 1px;
+  }
+
+  .label-cell.drag-copy {
+    background: rgba(100, 100, 255, 0.2);
+    border-color: #6666ff;
+    border-width: 1px;
+  }
+
+  .label-cell.drag-move {
+    background: rgba(0, 180, 80, 0.2);
+    border-color: #00b450;
+    border-width: 1px;
+    cursor: grabbing !important;
+  }
+
+  .label-cell:not(.origin):not(.drag-selected):not(.drag-copy):not(.drag-move):hover {
+    cursor: grab;
+  }
+
+  .label-cell.origin {
+    background: rgba(233, 69, 96, 0.25);
+    border-color: #e94560;
+    border-width: 1px;
+  }
+
+  /* ドラッグハンドル */
+  .drag-handle {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 6px;
+    height: 6px;
+    background: #e94560;
+    border-radius: 1px;
+    cursor: crosshair;
+    display: none;
+    z-index: 10;
+  }
+
+  .label-cell.origin .drag-handle {
+    display: block;
+  }
+
+  /* ===== トースト ===== */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #333;
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+    z-index: 9999;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ===== 置換ダイアログ ===== */
+  #replace-dialog {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+  }
+  #replace-box {
+    background: white;
+    border-radius: 10px;
+    padding: 24px;
+    width: 340px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  #replace-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #222;
+  }
+  .replace-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .replace-row label {
+    font-size: 11px;
+    color: #666;
+    font-weight: 600;
+  }
+  .replace-row input {
+    border: 1px solid #cdd0d6;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13px;
+    outline: none;
+  }
+  .replace-row input:focus { border-color: #e94560; }
+  #replace-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  /* ===== 印刷スタイル ===== */
+  @media print {
+    body { background: white; }
+    #control-panel { display: none !important; }
+    #row-numbers { display: none !important; }
+    #col-numbers { display: none !important; }
+    #corner { display: none !important; }
+    #preview-area { padding: 0; }
+    #page-wrapper {
+      box-shadow: none;
+      margin: 0;
+      width: 210mm;
+      padding-top: 19.5mm;
+      padding-left: 13mm;
+      padding-right: 21mm;
+      padding-bottom: 5.2mm;
+    }
+    .label-cell {
+      border: none;
+    }
+    .label-cell.selected,
+    .label-cell.drag-selected,
+    .label-cell.origin {
+      background: transparent !important;
+      border: none !important;
+    }
+    .drag-handle { display: none !important; }
+    @page {
+      size: A4;
+      margin: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app-layout">
+<div id="control-panel">
+  <div class="panel-title">🏷️ ラベル印刷</div>
+
+  <div class="panel-section">
+    <div class="section-label">1行目（株名＋連番）</div>
+    <div class="control-group">
+      <label>株名プレフィックス</label>
+      <input type="text" id="line1-prefix" value="" placeholder="例: AB291 m（株名）">
+    </div>
+    <div class="control-row">
+      <div class="control-group">
+        <label>開始番号</label>
+        <input type="number" id="start-num" value="1" min="0" style="width:80px">
+      </div>
+      <div class="control-group">
+        <label>増分</label>
+        <input type="number" id="step" value="1" min="1" style="width:60px">
+      </div>
+      <div class="control-group">
+        <label>ゼロ埋め</label>
+        <input type="number" id="pad" value="0" min="0" max="6" style="width:60px">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <div class="section-label">2行目（固定テキスト）</div>
+    <div class="control-group">
+      <input type="text" id="line2" value="" placeholder="例: Lung yyyymmdd">
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <div class="section-label">入力範囲</div>
+    <div class="control-row">
+      <div class="control-group">
+        <label>開始位置</label>
+        <input type="text" id="start-cell" value="1-1" placeholder="列-行" style="width:70px">
+      </div>
+      <div class="control-group">
+        <label>枚数</label>
+        <input type="number" id="count" value="161" min="1" max="161" style="width:70px">
+      </div>
+    </div>
+    <div class="control-group" style="margin-top:6px">
+      <label>入力方向</label>
+      <select id="direction">
+        <option value="row">横方向（→）</option>
+        <option value="col">縦方向（↓）</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <div class="section-label">一括操作</div>
+    <button class="btn btn-fill" onclick="fillLabels()">✦ 連番を一括入力</button>
+
+    <div class="section-label" style="margin-top:8px">選択範囲に反映</div>
+    <div class="btn-group">
+      <button class="btn btn-update" onclick="updateLine1()">↻ 1行目</button>
+      <button class="btn btn-update" onclick="updateLine2()">↻ 2行目</button>
+      <button class="btn btn-danger" onclick="clearDragRange()">✕ 消去</button>
+    </div>
+
+    <div class="section-label" style="margin-top:8px">全体</div>
+    <div class="btn-group">
+      <button class="btn btn-clear" onclick="clearAll()">✕ 全消去</button>
+      <button class="btn btn-print" onclick="window.print()">🖨 印刷</button>
+    </div>
+
+    <div class="section-label" style="margin-top:8px">操作履歴</div>
+    <div class="btn-group">
+      <button class="btn btn-clear" onclick="undo()" id="btn-undo" title="Ctrl+Z">↩ 元に戻す</button>
+      <button class="btn btn-clear" onclick="redo()" id="btn-redo" title="Ctrl+Y">↪ やり直し</button>
+    </div>
+  </div>
+</div>
+
+<div id="preview-area">
+  <div id="page-wrapper">
+    <div id="grid-wrapper">
+      <div id="corner"></div>
+      <div id="col-numbers"></div>
+      <div id="row-numbers"></div>
+      <div id="label-grid"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const COLS = 7;
+const ROWS = 23;
+const TOTAL = COLS * ROWS; // 161
+
+let cells = []; // { el, inputEl }
+let originCell = null;
+let isDragging = false;
+let dragStartIndex = null;
+let dragCurrentIndex = null;
+let isMoveMode = false; // Shift+ドラッグで移動モード
+
+// ===== Undo/Redo 履歴 =====
+const MAX_HISTORY = 50;
+let history = [];
+let historyIndex = -1;
+
+function saveState() {
+  // 現在より先の履歴を切り捨て
+  history = history.slice(0, historyIndex + 1);
+  history.push(cells.map(c => c.inputEl.value));
+  if (history.length > MAX_HISTORY) history.shift();
+  historyIndex = history.length - 1;
+  updateUndoRedoBtns();
+}
+
+function undo() {
+  if (historyIndex <= 0) return;
+  historyIndex--;
+  applyHistory(history[historyIndex]);
+  updateUndoRedoBtns();
+}
+
+function redo() {
+  if (historyIndex >= history.length - 1) return;
+  historyIndex++;
+  applyHistory(history[historyIndex]);
+  updateUndoRedoBtns();
+}
+
+function applyHistory(snapshot) {
+  snapshot.forEach((val, i) => {
+    cells[i].inputEl.value = val;
+    syncHeight(cells[i].inputEl);
+  });
+}
+
+function updateUndoRedoBtns() {
+  const u = document.getElementById('btn-undo');
+  const r = document.getElementById('btn-redo');
+  if (u) u.disabled = historyIndex <= 0;
+  if (r) r.disabled = historyIndex >= history.length - 1;
+}
+
+// ===== グリッド生成 =====
+function buildGrid() {
+  const grid = document.getElementById('label-grid');
+  grid.innerHTML = '';
+  cells = [];
+
+  // 列番号生成
+  const colNums = document.getElementById('col-numbers');
+  colNums.innerHTML = '';
+  for (let c = 0; c < COLS; c++) {
+    const num = document.createElement('div');
+    num.className = 'col-num';
+    num.textContent = c + 1;
+    colNums.appendChild(num);
+  }
+
+  // 行番号生成
+  const rowNums = document.getElementById('row-numbers');
+  rowNums.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    const num = document.createElement('div');
+    num.className = 'row-num';
+    num.textContent = r + 1;
+    rowNums.appendChild(num);
+  }
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const idx = r * COLS + c;
+      const cell = document.createElement('div');
+      cell.className = 'label-cell';
+      cell.dataset.idx = idx;
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      const input = document.createElement('textarea');
+      input.rows = 1;
+      input.autocomplete = 'off';
+      input.style.height = 'auto';
+
+      // 入力のたびに高さを自動調整
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = input.scrollHeight + 'px';
+      });
+
+      const handle = document.createElement('div');
+      handle.className = 'drag-handle';
+      handle.title = 'ドラッグして連番コピー';
+
+      cell.appendChild(input);
+      cell.appendChild(handle);
+      grid.appendChild(cell);
+      cells.push({ el: cell, inputEl: input });
+
+      // セルクリック → 原点セルに設定＋開始位置を自動セット
+      // セル本体をドラッグ → 選択範囲ごと移動モード
+      let cellMoveStart = null;
+      cell.addEventListener('mousedown', (e) => {
+        if (e.target === handle) return;
+        setOrigin(idx);
+        document.getElementById('start-cell').value = `${c + 1}-${r + 1}`;
+
+        // クリックで黄色ハイライト解除（新しいセルをクリックしたとき）
+        const isInSelection = dragStartIndex !== null && dragCurrentIndex !== null &&
+          getDragIndices(dragStartIndex, dragCurrentIndex).includes(idx);
+        if (!isInSelection) {
+          cells.forEach(c2 => c2.el.classList.remove('drag-selected', 'drag-copy', 'drag-move'));
+        }
+
+        // 移動ドラッグの準備
+        cellMoveStart = { x: e.clientX, y: e.clientY, idx };
+
+        if (e.target === input) return;
+        e.preventDefault();
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      });
+
+      cell.addEventListener('mousemove', (e) => {
+        if (!cellMoveStart || cellMoveStart.idx !== idx) return;
+        if (isDragging) return;
+        const dx = Math.abs(e.clientX - cellMoveStart.x);
+        const dy = Math.abs(e.clientY - cellMoveStart.y);
+        if (dx > 5 || dy > 5) {
+          // 移動ドラッグ開始：ドラッグ範囲が選択済みならその範囲を移動、なければこのセル単体
+          isDragging = true;
+          isMoveMode = true;
+          const hasSelection = dragStartIndex !== null && dragCurrentIndex !== null &&
+            getDragIndices(dragStartIndex, dragCurrentIndex).includes(idx);
+          if (hasSelection) {
+            // 既存の選択範囲をそのまま移動対象に
+            const indices = getDragIndices(dragStartIndex, dragCurrentIndex);
+            copiedValues = {
+              indices,
+              values: indices.map(i => cells[i].inputEl.value),
+              startR: Math.min(Math.floor(dragStartIndex / COLS), Math.floor(dragCurrentIndex / COLS)),
+              startC: Math.min(dragStartIndex % COLS, dragCurrentIndex % COLS),
+            };
+            // 移動の起点はドラッグ範囲の左上
+            dragStartIndex = copiedValues.startR * COLS + copiedValues.startC;
+          } else {
+            // 単体セル移動
+            copiedValues = {
+              indices: [idx],
+              values: [cells[idx].inputEl.value],
+              startR: r,
+              startC: c,
+            };
+            dragStartIndex = idx;
+          }
+          dragCurrentIndex = idx;
+          cellMoveStart = null;
+        }
+      });
+
+      cell.addEventListener('mouseup', () => { cellMoveStart = null; });
+
+      // ハンドルドラッグ
+      handle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        isDragging = true;
+        isMoveMode = e.shiftKey;
+        dragStartIndex = idx;
+        dragCurrentIndex = idx;
+        // コピー元を記録
+        copiedValues = {
+          indices: getDragIndices(idx, idx),
+          values: [cells[idx].inputEl.value],
+          startR: Math.floor(idx / COLS),
+          startC: idx % COLS,
+        };
+        highlightDrag(idx, idx, false, isMoveMode);
+      });
+    }
+  }
+
+  // グローバルマウスイベント
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+
+  // ラベル以外をクリックしたら黄色解除
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.label-cell')) {
+      cells.forEach(c => c.el.classList.remove('drag-selected', 'drag-copy', 'drag-move'));
+      dragStartIndex = null;
+      dragCurrentIndex = null;
+    }
+  });
+
+  // Ctrl/Shift押し離しでドラッグ中のハイライト色を即更新
+  document.addEventListener('keydown', (e) => {
+    if (isDragging) highlightDrag(dragStartIndex, dragCurrentIndex, e.ctrlKey, e.shiftKey || isMoveMode);
+  });
+  document.addEventListener('keyup', (e) => {
+    if (isDragging) highlightDrag(dragStartIndex, dragCurrentIndex, e.ctrlKey, e.shiftKey && isMoveMode);
+  });
+}
+
+function onMouseMove(e) {
+  if (!isDragging) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if (!el) return;
+  const cell = el.closest('.label-cell');
+  if (!cell) return;
+  const idx = parseInt(cell.dataset.idx);
+  dragCurrentIndex = idx;
+
+  if (isMoveMode && copiedValues) {
+    // 移動モード：移動先の予測形状をプレビュー
+    cells.forEach(c => c.el.classList.remove('drag-selected', 'drag-copy', 'drag-move'));
+    // 元の範囲はグレーアウト
+    copiedValues.indices.forEach(i => cells[i].el.classList.add('drag-selected'));
+    // 移動先プレビュー（緑）
+    const baseR = Math.floor(idx / COLS);
+    const baseC = idx % COLS;
+    copiedValues.indices.forEach((srcIdx, i) => {
+      const relR = Math.floor(srcIdx / COLS) - copiedValues.startR;
+      const relC = (srcIdx % COLS) - copiedValues.startC;
+      const destR = baseR + relR;
+      const destC = baseC + relC;
+      if (destR >= 0 && destR < ROWS && destC >= 0 && destC < COLS) {
+        cells[destR * COLS + destC].el.classList.add('drag-move');
+      }
+    });
+  } else {
+    highlightDrag(dragStartIndex, dragCurrentIndex, e.ctrlKey, false);
+  }
+}
+
+function onMouseUp(e) {
+  if (!isDragging) return;
+  isDragging = false;
+  saveState();
+  if (isMoveMode) {
+    // セル移動：元の位置を消去してペースト
+    const srcIndices = copiedValues.indices;
+    // 元セルを消去
+    srcIndices.forEach(i => { cells[i].inputEl.value = ''; syncHeight(cells[i].inputEl); });
+    // 貼り付け先に内容をセット
+    pasteCopied(dragCurrentIndex);
+    // ハイライト解除
+    cells.forEach(c => c.el.classList.remove('drag-selected', 'drag-copy', 'drag-move'));
+    dragStartIndex = null;
+    dragCurrentIndex = null;
+    showToast('移動しました');
+    isMoveMode = false;
+  } else if (e.ctrlKey && copiedValues) {
+    pasteCopied(dragCurrentIndex);
+    showToast('コピーして貼り付けました');
+  } else {
+    applyDragFill(dragStartIndex, dragCurrentIndex);
+  }
+}
+
+function pasteCopied(destOrigin) {
+  if (!copiedValues) return;
+  const baseR = Math.floor(destOrigin / COLS);
+  const baseC = destOrigin % COLS;
+  copiedValues.indices.forEach((srcIdx, i) => {
+    const relR = Math.floor(srcIdx / COLS) - copiedValues.startR;
+    const relC = (srcIdx % COLS) - copiedValues.startC;
+    const destR = baseR + relR;
+    const destC = baseC + relC;
+    if (destR >= 0 && destR < ROWS && destC >= 0 && destC < COLS) {
+      const destIdx = destR * COLS + destC;
+      cells[destIdx].inputEl.value = copiedValues.values[i];
+      syncHeight(cells[destIdx].inputEl);
+    }
+  });
+}
+
+function highlightDrag(start, end, isCopyMode = false, isMoveMode = false) {
+  cells.forEach(c => c.el.classList.remove('drag-selected', 'drag-copy', 'drag-move'));
+  const indices = getDragIndices(start, end);
+  const cls = isMoveMode ? 'drag-move' : isCopyMode ? 'drag-copy' : 'drag-selected';
+  indices.forEach(i => {
+    if (i !== start) cells[i].el.classList.add(cls);
+  });
+}
+
+function clearDragHighlight() {
+  cells.forEach(c => c.el.classList.remove('drag-selected'));
+}
+
+function getDragIndices(start, end) {
+  const sr = Math.floor(start / COLS), sc = start % COLS;
+  const er = Math.floor(end / COLS), ec = end % COLS;
+  const minR = Math.min(sr, er), maxR = Math.max(sr, er);
+  const minC = Math.min(sc, ec), maxC = Math.max(sc, ec);
+  const result = [];
+  for (let r = minR; r <= maxR; r++) {
+    for (let c = minC; c <= maxC; c++) {
+      result.push(r * COLS + c);
+    }
+  }
+  return result;
+}
+
+function applyDragFill(start, end) {
+  const srcValue = cells[start].inputEl.value;
+
+  // 1行目の末尾にある数字だけを連番対象にする
+  // 例: "AB291 m1\nLung 2026.3.3" → pre="AB291 m", num=1, post="\nLung 2026.3.3"
+  const lines = srcValue.split('\n');
+  const firstLine = lines[0];
+  const restLines = lines.slice(1).join('\n');
+  const suffix = restLines.length > 0 ? '\n' + restLines : '';
+
+  const match = firstLine.match(/^(.*?)(\d+)(\D*)$/);
+  if (!match) {
+    // 数値なし or 空 → そのままコピー
+    getDragIndices(start, end).forEach(i => {
+      if (i !== start) {
+        cells[i].inputEl.value = srcValue;
+        syncHeight(cells[i].inputEl);
+      }
+    });
+    return;
+  }
+
+  const pre = match[1], numStr = match[2], post = match[3];
+  const padLen = numStr.length;
+  let num = parseInt(numStr, 10);
+
+  const indices = getDragIndices(start, end);
+  // 方向を判定（横 or 縦）
+  const sr = Math.floor(start / COLS), sc = start % COLS;
+  const er = Math.floor(end / COLS), ec = end % COLS;
+  const isHoriz = Math.abs(ec - sc) >= Math.abs(er - sr);
+
+  if (isHoriz) {
+    // 横方向
+    const dir = ec >= sc ? 1 : -1;
+    const minC = Math.min(sc, ec), maxC = Math.max(sc, ec);
+    const r = sr;
+    for (let c = minC; c <= maxC; c++) {
+      const i = r * COLS + c;
+      const delta = (c - sc) * dir;
+      const val = pre + String(num + delta).padStart(padLen, '0') + post + suffix;
+      cells[i].inputEl.value = val;
+      syncHeight(cells[i].inputEl);
+    }
+  } else {
+    // 縦方向
+    const dir = er >= sr ? 1 : -1;
+    const minR = Math.min(sr, er), maxR = Math.max(sr, er);
+    const c = sc;
+    for (let r = minR; r <= maxR; r++) {
+      const i = r * COLS + c;
+      const delta = (r - sr) * dir;
+      const val = pre + String(num + delta).padStart(padLen, '0') + post + suffix;
+      cells[i].inputEl.value = val;
+      syncHeight(cells[i].inputEl);
+    }
+  }
+}
+
+// ===== テキストエリア高さ同期 =====
+function syncHeight(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+// ===== 原点セル =====
+function setOrigin(idx) {
+  cells.forEach(c => c.el.classList.remove('selected', 'origin'));
+  originCell = idx;
+  cells[idx].el.classList.add('origin');
+}
+
+// ===== 選択範囲を消去 =====
+function clearDragRange() {
+  if (dragStartIndex === null || dragCurrentIndex === null) {
+    alert('先にセルの■をドラッグして範囲を選んでください。');
+    return;
+  }
+  saveState();
+  getDragIndices(dragStartIndex, dragCurrentIndex).forEach(idx => {
+    cells[idx].inputEl.value = '';
+    syncHeight(cells[idx].inputEl);
+  });
+}
+
+// ===== 1行目だけドラッグ範囲に反映 =====
+function updateLine1() {
+  const prefix = document.getElementById('line1-prefix').value;
+  const startNum = parseInt(document.getElementById('start-num').value) || 1;
+  const step = parseInt(document.getElementById('step').value) || 1;
+  const pad = parseInt(document.getElementById('pad').value) || 0;
+
+  if (dragStartIndex === null || dragCurrentIndex === null) {
+    alert('先にセルの■をドラッグして範囲を選んでください。');
+    return;
+  }
+
+  saveState();
+  const indices = getDragIndices(dragStartIndex, dragCurrentIndex);
+  indices.forEach((idx, i) => {
+    const num = startNum + i * step;
+    const numStr = pad > 0 ? String(num).padStart(pad, '0') : String(num);
+    const current = cells[idx].inputEl.value;
+    const secondLine = current.includes('\n') ? current.split('\n').slice(1).join('\n') : '';
+    cells[idx].inputEl.value = prefix + numStr + (secondLine ? '\n' + secondLine : '');
+    syncHeight(cells[idx].inputEl);
+  });
+}
+
+// ===== 2行目だけドラッグ範囲に反映 =====
+function updateLine2() {
+  const line2 = document.getElementById('line2').value;
+
+  if (dragStartIndex === null || dragCurrentIndex === null) {
+    alert('先にセルの■をドラッグして範囲を選んでください。');
+    return;
+  }
+
+  saveState();
+  getDragIndices(dragStartIndex, dragCurrentIndex).forEach(idx => {
+    const current = cells[idx].inputEl.value;
+    const firstLine = current.split('\n')[0];
+    cells[idx].inputEl.value = firstLine + (line2 ? '\n' + line2 : '');
+    syncHeight(cells[idx].inputEl);
+  });
+}
+
+// ===== 一括連番入力 =====
+function fillLabels() {
+  saveState();
+  const line1Prefix = document.getElementById('line1-prefix').value;
+  const line2 = document.getElementById('line2').value;
+  const startNum = parseInt(document.getElementById('start-num').value) || 1;
+  const step = parseInt(document.getElementById('step').value) || 1;
+  const pad = parseInt(document.getElementById('pad').value) || 0;
+  const count = Math.min(parseInt(document.getElementById('count').value) || TOTAL, TOTAL);
+  const direction = document.getElementById('direction').value;
+  const startCell = document.getElementById('start-cell').value;
+
+  // 開始セル解析 (列-行)
+  let startC = 0, startR = 0;
+  const parts = startCell.split('-');
+  if (parts.length === 2) {
+    startC = Math.max(0, parseInt(parts[0]) - 1) || 0;
+    startR = Math.max(0, parseInt(parts[1]) - 1) || 0;
+  }
+
+  let num = startNum;
+  let filled = 0;
+
+  function setValue(idx) {
+    const numStr = pad > 0 ? String(num).padStart(pad, '0') : String(num);
+    const line1 = line1Prefix + numStr;
+    cells[idx].inputEl.value = line1 + (line2 ? '\n' + line2 : '');
+    syncHeight(cells[idx].inputEl);
+  }
+
+  if (direction === 'row') {
+    outer: for (let r = startR; r < ROWS; r++) {
+      for (let c = (r === startR ? startC : 0); c < COLS; c++) {
+        if (filled >= count) break outer;
+        setValue(r * COLS + c);
+        num += step;
+        filled++;
+      }
+    }
+  } else {
+    outer: for (let c = startC; c < COLS; c++) {
+      for (let r = (c === startC ? startR : 0); r < ROWS; r++) {
+        if (filled >= count) break outer;
+        setValue(r * COLS + c);
+        num += step;
+        filled++;
+      }
+    }
+  }
+
+  setOrigin(startR * COLS + startC);
+}
+
+// ===== 全消去 =====
+function clearAll() {
+  saveState();
+  cells.forEach(c => {
+    c.inputEl.value = '';
+    syncHeight(c.inputEl);
+    c.el.classList.remove('selected', 'drag-selected');
+  });
+  if (originCell === null) setOrigin(0);
+}
+
+// ===== コピー・ペースト =====
+let copiedValues = null; // { indices: [], values: [], shape: {rows, cols} }
+
+document.addEventListener('keydown', (e) => {
+  const active = document.activeElement;
+  const inTextarea = active && active.tagName === 'TEXTAREA' && active.closest('.label-cell');
+
+  // Ctrl+C: ドラッグ範囲をコピー（テキスト選択がなければセルコピー優先）
+  if (e.ctrlKey && e.key === 'c') {
+    const sel = window.getSelection();
+    if (sel && sel.toString().length > 0) return; // テキスト選択中はブラウザのコピーに任せる
+    if (dragStartIndex !== null && dragCurrentIndex !== null) {
+      e.preventDefault();
+      const indices = getDragIndices(dragStartIndex, dragCurrentIndex);
+      copiedValues = {
+        indices,
+        values: indices.map(i => cells[i].inputEl.value),
+        startR: Math.min(Math.floor(dragStartIndex / COLS), Math.floor(dragCurrentIndex / COLS)),
+        startC: Math.min(dragStartIndex % COLS, dragCurrentIndex % COLS),
+      };
+      showToast('コピーしました（' + indices.length + 'セル）');
+    }
+    return;
+  }
+
+  // Ctrl+V: originCellを起点にペースト
+  if (e.ctrlKey && e.key === 'v') {
+    if (!copiedValues || originCell === null) return;
+    e.preventDefault();
+    saveState();
+    pasteCopied(originCell);
+    showToast('ペーストしました');
+    return;
+  }
+
+  // Ctrl+Z: Undo
+  if (e.ctrlKey && e.key === 'z' && !inTextarea) {
+    e.preventDefault();
+    undo();
+    return;
+  }
+
+  // Ctrl+Y: Redo
+  if (e.ctrlKey && e.key === 'y' && !inTextarea) {
+    e.preventDefault();
+    redo();
+    return;
+  }
+
+  // Ctrl+H: 一括置換ダイアログ
+  if (e.ctrlKey && e.key === 'h') {
+    e.preventDefault();
+    openReplaceDialog();
+    return;
+  }
+});
+
+// ===== トースト通知 =====
+function showToast(msg) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+// ===== 一括置換ダイアログ =====
+function openReplaceDialog() {
+  if (document.getElementById('replace-dialog')) return;
+  const hasRange = dragStartIndex !== null && dragCurrentIndex !== null;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'replace-dialog';
+  overlay.innerHTML = `
+    <div id="replace-box">
+      <div id="replace-title">🔁 一括置換</div>
+      <div class="replace-row">
+        <label>検索</label>
+        <input type="text" id="replace-from" placeholder="置換前の文字列">
+      </div>
+      <div class="replace-row">
+        <label>置換後</label>
+        <input type="text" id="replace-to" placeholder="置換後の文字列（空欄=削除）">
+      </div>
+      <div class="replace-row" style="flex-direction:row;align-items:center;gap:8px">
+        <input type="checkbox" id="replace-range-only" ${hasRange ? '' : 'disabled'} ${hasRange ? 'checked' : ''}>
+        <label style="font-size:12px;color:${hasRange ? '#333' : '#aaa'}">選択範囲のみ${hasRange ? '' : '（範囲未選択）'}</label>
+      </div>
+      <div id="replace-btns">
+        <button onclick="execReplace()" class="btn btn-fill">置換する</button>
+        <button onclick="closeReplaceDialog()" class="btn btn-clear">キャンセル</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('replace-from').focus();
+}
+
+function closeReplaceDialog() {
+  const d = document.getElementById('replace-dialog');
+  if (d) d.remove();
+}
+
+function execReplace() {
+  const from = document.getElementById('replace-from').value;
+  const to = document.getElementById('replace-to').value;
+  const rangeOnly = document.getElementById('replace-range-only').checked;
+  if (!from) return;
+
+  const targetIndices = rangeOnly && dragStartIndex !== null && dragCurrentIndex !== null
+    ? getDragIndices(dragStartIndex, dragCurrentIndex)
+    : cells.map((_, i) => i);
+
+  saveState();
+  let count = 0;
+  targetIndices.forEach(i => {
+    if (cells[i].inputEl.value.includes(from)) {
+      cells[i].inputEl.value = cells[i].inputEl.value.replaceAll(from, to);
+      syncHeight(cells[i].inputEl);
+      count++;
+    }
+  });
+  closeReplaceDialog();
+  showToast(`${count}件を置換しました`);
+}
+
+// ===== 初期化 =====
+buildGrid();
+setOrigin(0);
+saveState(); // 初期状態を履歴に保存
+updateUndoRedoBtns();
+</script>
+</body>
+</html>
