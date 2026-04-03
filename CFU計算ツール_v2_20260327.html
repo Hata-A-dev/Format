@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>CFU計算ツール v1.0</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#eeecea;padding:20px;font-size:13px;color:#1c1c2e;min-width:900px}
+h1{font-size:1rem;font-weight:700;margin-bottom:14px;color:#1c1c2e}
+
+/* カード */
+.card{background:#fff;border:1px solid #d8d4cc;border-radius:10px;padding:14px 18px;margin-bottom:10px}
+.sec{font-size:10px;font-weight:700;color:#8a8a9a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.1em}
+
+/* 設定行 */
+.setup{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.f{display:flex;flex-direction:column;gap:3px}
+.f label{font-size:10px;color:#8a8a9a}
+.f input,.f select{height:30px;border:1px solid #ccc;border-radius:6px;padding:0 8px;font-size:12px;background:#fff;color:#1c1c2e}
+.f input:focus,.f select:focus{outline:none;border-color:#5a8fc2}
+.dil-group{display:flex;align-items:flex-end;gap:4px}
+.dil-box{display:flex;flex-direction:column;align-items:center;gap:2px}
+.dil-box input{width:46px;height:30px;border:1px solid #ccc;border-radius:6px;font-size:12px;text-align:center;padding:0}
+.dil-sub{font-size:9px;color:#aaa}
+.dil-arrow{font-size:11px;color:#ccc;padding-bottom:10px}
+
+/* 群パネル */
+.group-layout{display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:start}
+
+/* 群リスト（左）*/
+.group-list{display:flex;flex-direction:column;gap:4px}
+.gitem{display:flex;align-items:center;gap:0;border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid transparent;transition:all 0.15s}
+.gitem:hover{border-color:#d0ccc4}
+.gitem.active{border-color:#5a8fc2;box-shadow:0 0 0 2px #5a8fc220}
+.gcolor{width:5px;align-self:stretch;flex-shrink:0}
+.ginfo{flex:1;padding:8px 10px;background:#f8f7f4}
+.gitem.active .ginfo{background:#f0f4ff}
+.gname-label{font-size:12px;font-weight:600;color:#1c1c2e}
+.gstat{font-size:10px;color:#8a8a9a;margin-top:1px}
+.gdel{width:26px;height:100%;display:flex;align-items:center;justify-content:center;background:#f8f7f4;color:#ccc;font-size:14px;border:none;cursor:pointer;flex-shrink:0}
+.gitem.active .gdel{background:#f0f4ff}
+.gdel:hover{color:#e07070}
+.gadd{height:34px;border:1px dashed #ccc;border-radius:8px;background:transparent;color:#aaa;font-size:12px;cursor:pointer;width:100%}
+.gadd:hover{border-color:#5a8fc2;color:#5a8fc2}
+
+/* グリッドテーブル（右）*/
+.grid-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.gname-input{height:28px;border:1px solid #e0ddd8;border-radius:6px;padding:0 8px;font-size:13px;font-weight:600;color:#1c1c2e;width:120px;background:transparent}
+.gname-input:focus{outline:none;border-color:#5a8fc2;background:#fff}
+.color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:600;color:#8a8a9a;padding:5px 6px;border-bottom:1px solid #eee;text-align:center;background:#f8f7f4;white-space:nowrap}
+.tbl th.tleft{text-align:left}
+.tbl td{padding:3px 4px;border-bottom:1px solid #f4f2ef;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafaf8}
+
+.ni{height:26px;border:1px solid #e8e4dc;border-radius:5px;padding:0 6px;font-size:11px;width:64px;background:transparent;color:#1c1c2e}
+.ci{height:26px;border:1px solid #d4d0c8;border-radius:5px;padding:0 4px;font-size:12px;width:60px;text-align:center;background:#fff;color:#1c1c2e;transition:border-color 0.1s,background 0.1s}
+.ci:focus{outline:none;border-color:#5a8fc2}
+.ci.warn{border-color:#e8a060;background:#fff8f0}
+.ci.ok{border-color:#90cc90;background:#f4faf5}
+.rval{font-size:11px;text-align:right;padding-right:6px;color:#8a8a9a;min-width:80px}
+.lval{font-size:11px;text-align:center;font-weight:600;color:#1c1c2e;min-width:50px}
+.wicon{font-size:9px;color:#cc6622;text-align:center;min-height:10px}
+.rsel{display:flex;gap:4px;justify-content:center}
+.rsel label{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:9px;color:#aaa;cursor:pointer}
+.rsel input[type=radio]{accent-color:#3fb950;cursor:pointer}
+
+/* サマリーパネル */
+.summary-layout{display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:start}
+.sum-group-list{display:flex;flex-direction:column;gap:6px}
+.sum-gcard{border-left:4px solid;border-radius:0 6px 6px 0;padding:8px 10px;background:#f8f7f4}
+.sum-gname{font-size:11px;font-weight:700;margin-bottom:4px}
+.sum-stats{font-size:11px;color:#6a6a7a}
+.sum-animals{display:flex;flex-wrap:wrap;gap:5px}
+.sum-a{background:#f8f7f4;border-radius:5px;padding:5px 8px;min-width:72px;text-align:center}
+.sum-aname{font-size:10px;color:#8a8a9a}
+.sum-aval{font-size:13px;font-weight:700}
+.sum-alog{font-size:10px;color:#aaa}
+.sum-awarn{font-size:9px;color:#cc6622}
+
+/* 検定 */
+.stat-pairs{display:flex;flex-wrap:wrap;gap:8px}
+.stat-pair{background:#f8f7f4;border-radius:8px;padding:10px 14px;min-width:200px}
+.stat-vs{font-size:11px;color:#8a8a9a;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.stat-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.stat-p{font-size:18px;font-weight:700;margin-bottom:2px}
+.stat-sig{font-size:13px;font-weight:700;margin-bottom:4px}
+.stat-detail{font-size:10px;color:#aaa}
+.ns{color:#aaa}.s1{color:#e07b5a}.s2{color:#cc4400}.s3{color:#1a8030}
+.stmbtn{height:26px;padding:0 10px;border:1px solid #ccc;border-radius:5px;background:#fff;color:#6a6a7a;font-size:11px;cursor:pointer}
+.stmbtn:hover{background:#f4f4f4}
+.stmbtn.active{background:#1a3a88;color:#fff;border-color:#1a3a88;font-weight:600}
+
+/* グラフ */
+.graph-wrap{display:none;margin-top:10px}
+.canvas-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+canvas{border:1px solid #e8e4dc;border-radius:8px;background:#fff;width:100%;height:auto}
+
+/* ボタン */
+.btn-row{display:flex;gap:7px;flex-wrap:wrap}
+.btn{height:30px;padding:0 12px;border:1px solid #d4d0c8;border-radius:6px;background:#fff;color:#1c1c2e;font-size:12px;cursor:pointer;transition:all 0.1s}
+.btn:hover{background:#f4f2ef;border-color:#b0aaa0}
+.btn-green{border-color:#3fb950;color:#1a6030;background:#f4faf5;font-weight:700}
+.btn-green:hover{background:#e8f4e8}
+.btn-blue{border-color:#88aad8;color:#1a3a88}
+
+/* コード */
+.code-box{background:#f4f2ef;border:1px solid #e0ddd8;border-radius:6px;padding:10px;font-family:'Consolas',monospace;font-size:11px;white-space:pre;overflow-x:auto;max-height:180px;overflow-y:auto;display:none;margin-top:8px;color:#1c1c2e}
+</style>
+</head>
+<body>
+<h1>CFU / PFU 計算ツール <span style="font-size:11px;font-weight:400;color:#6a6a7a">v1.0</span></h1>
+
+<!-- 設定 -->
+<div class="card">
+  <div class="sec">基本設定</div>
+  <div class="setup">
+    <div class="f"><label>種別</label>
+      <select id="type" onchange="renderAll()" style="width:110px">
+        <option value="CFU">CFU（細菌）</option>
+        <option value="PFU">PFU（ファージ）</option>
+      </select></div>
+    <div class="f"><label>希釈倍率/段階</label>
+      <select id="fold" onchange="renderAll()" style="width:90px">
+        <option value="10">10倍</option><option value="5">5倍</option><option value="2">2倍</option>
+      </select></div>
+    <div class="f"><label>希釈段階（連動）</label>
+      <div class="dil-group">
+        <div class="dil-box"><input type="number" id="d1" value="3" min="1" max="10" oninput="syncDils('d1')"><div class="dil-sub" id="d1s">10⁻³</div></div>
+        <div class="dil-arrow">→</div>
+        <div class="dil-box"><input type="number" id="d2" value="4" min="1" max="11" oninput="syncDils('d2')"><div class="dil-sub" id="d2s">10⁻⁴</div></div>
+        <div class="dil-arrow">→</div>
+        <div class="dil-box"><input type="number" id="d3" value="5" min="1" max="12" oninput="syncDils('d3')"><div class="dil-sub" id="d3s">10⁻⁵</div></div>
+      </div></div>
+    <div class="f"><label>接種量 (µL)</label><input type="number" id="vol" value="100" min="0.1" oninput="renderAll()" style="width:80px"></div>
+    <div class="f"><label>臓器液量 (mL)</label><input type="number" id="orgvol" value="1" min="0.1" step="0.1" oninput="renderAll()" style="width:70px"></div>
+    <div class="f"><label>個体数/群</label>
+      <select id="nani" onchange="resizeAll()" style="width:80px">
+        <option value="3">3個体</option><option value="4">4個体</option><option value="5">5個体</option>
+        <option value="6" selected>6個体</option><option value="7">7個体</option><option value="8">8個体</option>
+      </select></div>
+  </div>
+</div>
+
+<!-- 入力 -->
+<div class="card">
+  <div class="sec">コロニー数入力</div>
+  <div class="group-layout">
+    <div>
+      <div class="group-list" id="group-list"></div>
+      <button class="gadd" onclick="addGroup()" style="margin-top:6px">＋ 群を追加</button>
+    </div>
+    <div id="grid-panel"></div>
+  </div>
+</div>
+
+<!-- サマリー -->
+<div class="card">
+  <div class="sec">サマリー</div>
+  <div class="summary-layout">
+    <div class="sum-group-list" id="sum-left"></div>
+    <div class="sum-animals" id="sum-right"></div>
+  </div>
+</div>
+
+<!-- 検定 -->
+<div class="card" id="stat-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+    <div class="sec" style="margin-bottom:0">群間比較</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap" id="stat-method-btns">
+      <button class="stmbtn active" id="sm-welch"    onclick="setStatMethod('welch',this)">Welch t検定（2群）</button>
+      <button class="stmbtn"        id="sm-tukey"    onclick="setStatMethod('tukey',this)">Tukey-Kramer（多群・全ペア）</button>
+      <button class="stmbtn"        id="sm-dunnett"  onclick="setStatMethod('dunnett',this)">Dunnett（vs Control）</button>
+      <button class="stmbtn"        id="sm-mannw"    onclick="setStatMethod('mannw',this)">Mann-Whitney U（参考）</button>
+    </div>
+  </div>
+  <div class="stat-pairs" id="stat-pairs"></div>
+  <div style="font-size:10px;color:#aaa;margin-top:8px" id="stat-note"></div>
+</div>
+
+<!-- グラフ・出力 -->
+<div class="card">
+  <div class="sec">グラフ・エクスポート</div>
+  <div class="btn-row">
+    <button class="btn btn-green" onclick="drawGraph()">📊 グラフ生成</button>
+    <button class="btn btn-blue" onclick="genCSV()">CSV生成</button>
+    <button class="btn" onclick="copyCSV()">CSVコピー</button>
+    <button class="btn" onclick="exportExcel()" style="border-color:#1a7a30;color:#1a5020;font-weight:700;background:#f0faf2">Excel出力</button>
+    <button class="btn" onclick="genR()">Rスクリプト</button>
+    <button class="btn" onclick="genPy()">Pythonスクリプト</button>
+  </div>
+  <div class="code-box" id="code-out"></div>
+  <div class="graph-wrap" id="graph-wrap">
+    <div class="canvas-grid">
+      <canvas id="cv1" width="560" height="320"></canvas>
+      <canvas id="cv2" width="560" height="320"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const PALETTE=['#5a8fc2','#e07b5a','#3fb950','#c080d8','#f0a030','#20a090','#e06080','#a0b830'];
+let groups=[];
+let active=0;
+
+function S(){
+  return{
+    type:document.getElementById('type').value,
+    fold:parseFloat(document.getElementById('fold').value),
+    dils:[parseInt(document.getElementById('d1').value)||3,parseInt(document.getElementById('d2').value)||4,parseInt(document.getElementById('d3').value)||5],
+    vol:parseFloat(document.getElementById('vol').value)/1000,
+    orgvol:parseFloat(document.getElementById('orgvol').value),
+  };
+}
+function color(i){return PALETTE[i%PALETTE.length];}
+function calcCFU(c,dil,s){return c*Math.pow(s.fold,dil)/s.vol*s.orgvol;}
+function cls(c){if(c===null||isNaN(c))return '';return(c<30||c>300)?'warn':'ok';}
+
+function makeGroup(name,n){
+  return{name,animals:Array.from({length:n},(_,i)=>({name:`#${i+1}`,cols:[null,null,null],sel:0}))};
+}
+
+function initGroups(){
+  groups=[makeGroup('Control',6),makeGroup('Drug',6)];
+  active=0;renderAll();
+}
+
+function resizeAll(){
+  const n=parseInt(document.getElementById('nani').value);
+  groups=groups.map(g=>{
+    const a=g.animals;
+    const newA=Array.from({length:n},(_,i)=>a[i]||{name:`#${i+1}`,cols:[null,null,null],sel:0});
+    return{...g,animals:newA};
+  });
+  renderAll();
+}
+
+function addGroup(){
+  const n=parseInt(document.getElementById('nani').value);
+  const def=['Control','Drug','Group C','Group D','Group E','Group F','Group G','Group H'];
+  groups.push(makeGroup(def[groups.length]||`Group ${groups.length+1}`,n));
+  active=groups.length-1;renderAll();
+}
+
+function delGroup(i){
+  if(groups.length<=1)return;
+  groups.splice(i,1);
+  active=Math.max(0,Math.min(active,groups.length-1));
+  renderAll();
+}
+
+function setActive(i){active=i;renderGroupList();renderGrid();}
+
+function syncDils(ch){
+  const d1=document.getElementById('d1'),d2=document.getElementById('d2'),d3=document.getElementById('d3');
+  const v=parseInt(document.getElementById(ch).value)||1;
+  if(ch==='d1'){d2.value=v+1;d3.value=v+2;}
+  else if(ch==='d2'){d1.value=Math.max(1,v-1);d3.value=v+1;if(v<=1){d1.value=1;d2.value=2;d3.value=3;}}
+  else{d2.value=Math.max(2,v-1);d1.value=Math.max(1,v-2);if(v<=2){d1.value=1;d2.value=2;d3.value=3;}}
+  updateSubs();renderAll();
+}
+
+function updateSubs(){
+  ['d1','d2','d3'].forEach(id=>{
+    const v=parseInt(document.getElementById(id).value)||1;
+    const sup=v.toString().split('').map(c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]||c).join('');
+    document.getElementById(id+'s').textContent=`10⁻${sup}`;
+  });
+}
+
+// ── 群リスト（左） ──
+function renderGroupList(){
+  const list=document.getElementById('group-list');
+  list.innerHTML=groups.map((g,i)=>{
+    const s=S();
+    const logs=getUsedLogs(g,s);
+    const stat=logs.length?`n=${logs.length}, mean=${(logs.reduce((a,b)=>a+b,0)/logs.length).toFixed(2)}`:'データなし';
+    return`<div class="gitem${i===active?' active':''}" onclick="setActive(${i})">
+      <div class="gcolor" style="background:${color(i)}"></div>
+      <div class="ginfo">
+        <div class="gname-label" style="color:${color(i)}">${g.name}</div>
+        <div class="gstat">${stat}</div>
+      </div>
+      <button class="gdel" onclick="event.stopPropagation();delGroup(${i})" title="削除">×</button>
+    </div>`;
+  }).join('');
+}
+
+// ── グリッド（右） ──
+function renderGrid(){
+  const s=S();const g=groups[active];const c=color(active);
+  let h=`<div class="grid-header">
+    <div class="color-dot" style="background:${c}"></div>
+    <input class="gname-input" value="${g.name}" oninput="groups[${active}].name=this.value;renderGroupList();renderSummary();runStat()">
+    <span style="font-size:10px;color:#aaa;margin-left:4px">← 群名を変更</span>
+  </div>`;
+
+  h+=`<table class="tbl"><thead><tr><th class="tleft" style="width:70px">個体</th>`;
+  for(let i=0;i<3;i++){
+    const f=Math.pow(s.fold,s.dils[i]);
+    h+=`<th colspan="2" style="min-width:130px">10⁻${s.dils[i]}
+      <span style="font-size:9px;font-weight:400;color:#bbb;display:block">${f.toLocaleString()}倍希釈</span></th>`;
+  }
+  h+=`<th style="width:90px">採用段階</th><th style="min-width:90px">${s.type}/mL</th><th style="width:54px">log₁₀</th></tr>
+  <tr style="background:#faf9f7"><th></th>`;
+  for(let i=0;i<3;i++) h+=`<th style="font-size:9px;color:#bbb;font-weight:400">コロニー</th><th style="font-size:9px;color:#bbb;font-weight:400">換算値</th>`;
+  h+=`<th></th><th></th><th></th></tr></thead><tbody>`;
+
+  g.animals.forEach((a,ai)=>{
+    h+=`<tr><td><input class="ni" value="${a.name}" oninput="groups[${active}].animals[${ai}].name=this.value;renderGroupList();renderSummary()"></td>`;
+    for(let i=0;i<3;i++){
+      const cv=a.cols[i];
+      const cfu=(cv!==null&&!isNaN(cv)&&cv>=0)?calcCFU(cv,s.dils[i],s):null;
+      const cc=cls(cv);
+      const w=cv!==null?(cv<30?'↓少':cv>300?'↑多':''):'';
+      h+=`<td style="text-align:center;padding:3px 3px">
+        <input class="ci ${cc}" type="number" min="0" value="${cv!==null?cv:''}" placeholder="—"
+          oninput="setCol(${ai},${i},this.value)">
+        <div class="wicon">${w}</div>
+      </td>
+      <td class="rval" style="${cc==='warn'?'color:#cc6622':''}">${cfu?cfu.toExponential(2):'—'}</td>`;
+    }
+    h+=`<td><div class="rsel">`;
+    for(let i=0;i<3;i++){
+      h+=`<label style="${a.sel===i?`color:${c};font-weight:700`:''}">
+        <input type="radio" name="s${active}-${ai}" value="${i}" ${a.sel===i?'checked':''}
+          onchange="groups[${active}].animals[${ai}].sel=${i};renderAll()">
+        D${i+1}</label>`;
+    }
+    h+=`</div></td>`;
+    const sc=a.cols[a.sel];
+    const scfu=(sc!==null&&!isNaN(sc)&&sc>=0)?calcCFU(sc,s.dils[a.sel],s):null;
+    const slog=scfu?Math.log10(scfu).toFixed(2):'—';
+    const highlight=scfu?`font-weight:700;color:${c}`:'color:#aaa';
+    h+=`<td class="rval" style="${highlight}">${scfu?scfu.toExponential(2):'—'}</td>
+      <td class="lval" style="${scfu?`color:${c}`:''}">${slog}</td></tr>`;
+  });
+  h+=`</tbody></table>`;
+  document.getElementById('grid-panel').innerHTML=h;
+}
+
+function setCol(ai,ci,val){
+  groups[active].animals[ai].cols[ci]=val===''?null:parseFloat(val);
+  renderGrid();renderGroupList();renderSummary();runStat();
+}
+
+// ── サマリー ──
+function getUsedLogs(g,s){
+  return g.animals.map(a=>{
+    const c=a.cols[a.sel];
+    if(c===null||isNaN(c)||c<=0) return null;
+    return Math.log10(calcCFU(c,s.dils[a.sel],s));
+  }).filter(v=>v!==null);
+}
+
+function renderSummary(){
+  const s=S();
+  // 左: 群統計
+  const left=document.getElementById('sum-left');
+  left.innerHTML=groups.map((g,gi)=>{
+    const logs=getUsedLogs(g,s);
+    const mean=logs.length?(logs.reduce((a,b)=>a+b,0)/logs.length).toFixed(3):'—';
+    const sem=logs.length>1?Math.sqrt(logs.map(v=>(v-parseFloat(mean))**2).reduce((a,b)=>a+b,0)/(logs.length*(logs.length-1))).toFixed(3):'—';
+    return`<div class="sum-gcard" style="border-color:${color(gi)}">
+      <div class="sum-gname" style="color:${color(gi)}">${g.name}</div>
+      <div class="sum-stats">n = ${logs.length}<br>Mean = ${mean}<br>SEM = ${sem}</div>
+    </div>`;
+  }).join('');
+
+  // 右: アクティブ群の個体別
+  const g=groups[active];const c=color(active);
+  const right=document.getElementById('sum-right');
+  right.innerHTML=`<div style="width:100%;font-size:10px;color:${c};font-weight:700;margin-bottom:4px">${g.name} の個体別</div>`+
+  g.animals.map(a=>{
+    const cv=a.cols[a.sel];
+    const cfu=(cv!==null&&!isNaN(cv)&&cv>=0)?calcCFU(cv,s.dils[a.sel],s):null;
+    const log=cfu?Math.log10(cfu).toFixed(2):'—';
+    const warn=cv!==null&&(cv<30||cv>300);
+    return`<div class="sum-a">
+      <div class="sum-aname">${a.name}</div>
+      <div class="sum-aval" style="color:${cfu?c:'#ccc'}">${cfu?cfu.toExponential(1):'—'}</div>
+      <div class="sum-alog">${log}</div>
+      ${warn?'<div class="sum-awarn">⚠</div>':''}
+    </div>`;
+  }).join('');
+}
+
+// ── 検定 ──
+// ── 検定関数群 ──
+let statMethod='welch';
+function setStatMethod(m,el){
+  statMethod=m;
+  document.querySelectorAll('.stmbtn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  runStat();
+}
+
+// t分布のp値（自由度df、両側）
+function tDist(t,df){
+  // Abramowitz & Stegun近似
+  const x=df/(df+t*t);
+  const a=0.5*incompleteBeta(x,df/2,0.5);
+  return Math.min(1,Math.max(0,a));
+}
+function incompleteBeta(x,a,b){
+  // 連分数展開（Lentz法、簡易版）
+  if(x<0||x>1) return 0;
+  if(x===0) return 0;
+  if(x===1) return 1;
+  const lbeta=lgamma(a)+lgamma(b)-lgamma(a+b);
+  const front=Math.exp(Math.log(x)*a+Math.log(1-x)*b-lbeta)/a;
+  return front*cf(x,a,b);
+}
+function cf(x,a,b){
+  const MAXIT=200,EPS=3e-7;
+  let c=1,d=1-(a+b)*x/(a+1);
+  if(Math.abs(d)<1e-30) d=1e-30;
+  d=1/d;let h=d;
+  for(let m=1;m<=MAXIT;m++){
+    let aa=m*(b-m)*x/((a+2*m-1)*(a+2*m));
+    d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;
+    c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;
+    d=1/d;h*=d*c;
+    aa=-(a+m)*(a+b+m)*x/((a+2*m)*(a+2*m+1));
+    d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;
+    c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;
+    d=1/d;const del=d*c;h*=del;
+    if(Math.abs(del-1)<EPS) break;
+  }
+  return h;
+}
+function lgamma(x){
+  const c=[76.18009172947146,-86.50532032941677,24.01409824083091,
+           -1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y=x,tmp=x+5.5;
+  tmp-=(x+0.5)*Math.log(tmp);
+  let ser=1.000000000190015;
+  for(let j=0;j<6;j++) ser+=c[j]/++y;
+  return -tmp+Math.log(2.5066282746310005*ser/x);
+}
+function ncdf(z){
+  const a=[0.254829592,-0.284496736,1.421413741,-1.453152027,1.061405429],p=0.3275911;
+  const t=1/(1+p*Math.abs(z));
+  const y=1-((((a[4]*t+a[3])*t+a[2])*t+a[1])*t+a[0])*t*Math.exp(-z*z);
+  return 0.5*(1+(z<0?-1:1)*y);
+}
+
+// Welch t検定
+function welchT(x,y){
+  const nx=x.length,ny=y.length;
+  const mx=x.reduce((a,b)=>a+b,0)/nx, my=y.reduce((a,b)=>a+b,0)/ny;
+  const vx=x.map(v=>(v-mx)**2).reduce((a,b)=>a+b,0)/(nx-1);
+  const vy=y.map(v=>(v-my)**2).reduce((a,b)=>a+b,0)/(ny-1);
+  const se=Math.sqrt(vx/nx+vy/ny);
+  const t=(mx-my)/se;
+  const df=(vx/nx+vy/ny)**2/((vx/nx)**2/(nx-1)+(vy/ny)**2/(ny-1));
+  const p=tDist(Math.abs(t),df);
+  return{t,df,p,mx,my,se};
+}
+
+// Mann-Whitney U
+function mannW(x,y){
+  const nx=x.length,ny=y.length;
+  let u=0;
+  x.forEach(xi=>y.forEach(yj=>u+=(xi>yj?1:xi===yj?0.5:0)));
+  const mu=nx*ny/2,sig=Math.sqrt(nx*ny*(nx+ny+1)/12);
+  const z=(u-mu)/sig;
+  const p=2*(1-ncdf(Math.abs(z)));
+  return{u,z,p};
+}
+
+// Tukey-Kramer（studentized range近似）
+function tukeyKramer(allGroups){
+  const k=allGroups.length;
+  const gLogs=allGroups.map(g=>g.logs);
+  const ns=gLogs.map(l=>l.length);
+  const N=ns.reduce((a,b)=>a+b,0);
+  const df=N-k;
+  // プールされた分散
+  const means=gLogs.map(l=>l.reduce((a,b)=>a+b,0)/l.length);
+  const MSe=gLogs.map((l,i)=>l.map(v=>(v-means[i])**2).reduce((a,b)=>a+b,0)).reduce((a,b)=>a+b,0)/df;
+  const results=[];
+  for(let i=0;i<k;i++){
+    for(let j=i+1;j<k;j++){
+      const se=Math.sqrt(MSe/2*(1/ns[i]+1/ns[j]));
+      const q=Math.abs(means[i]-means[j])/se;
+      // studentized range分布のp値近似（正規近似）
+      const p=approxTukeyP(q,k,df);
+      results.push({i,j,q,p,mi:means[i],mj:means[j],df});
+    }
+  }
+  return results;
+}
+
+function approxTukeyP(q,k,df){
+  // Bonferroni補正を使った保守的近似
+  // より正確にはstudentized range分布だが、近似として両側t検定×ペア数補正
+  const nPairs=k*(k-1)/2;
+  const p=tDist(q/Math.SQRT2, df)*nPairs;
+  return Math.min(1,p);
+}
+
+// Dunnett検定（Control vs 各群、正規近似）
+function dunnett(ctrlLogs, treatGroups){
+  const nc=ctrlLogs.length;
+  const mc=ctrlLogs.reduce((a,b)=>a+b,0)/nc;
+  const k=treatGroups.length+1;
+  // 全データでプールされた分散
+  const allLogs=[ctrlLogs,...treatGroups.map(g=>g.logs)];
+  const allMeans=[mc,...treatGroups.map(g=>g.logs.reduce((a,b)=>a+b,0)/g.logs.length)];
+  const N=allLogs.reduce((a,l)=>a+l.length,0);
+  const df=N-k;
+  const MSe=allLogs.map((l,i)=>l.map(v=>(v-allMeans[i])**2).reduce((a,b)=>a+b,0)).reduce((a,b)=>a+b,0)/df;
+  return treatGroups.map((g,gi)=>{
+    const nt=g.logs.length;
+    const mt=g.logs.reduce((a,b)=>a+b,0)/nt;
+    const se=Math.sqrt(MSe*(1/nc+1/nt));
+    const t=Math.abs(mc-mt)/se;
+    // Dunnett臨界値の正規近似（保守的）
+    const m=treatGroups.length;
+    const p=Math.min(1, tDist(t,df)*m);
+    return{gi,t,p,mc,mt,df,nc,nt};
+  });
+}
+
+function sigInfo(p){
+  if(p<0.001)return{lbl:'***',cls:'s3'};
+  if(p<0.01)return{lbl:'**',cls:'s2'};
+  if(p<0.05)return{lbl:'*',cls:'s1'};
+  return{lbl:'ns',cls:'ns'};
+}
+
+function statCard(i,j,lbl,cls,pStr,detail){
+  return`<div class="stat-pair">
+    <div class="stat-vs">
+      <div class="stat-dot" style="background:${color(i)}"></div>${groups[i].name}
+      <span style="color:#ccc">vs</span>
+      <div class="stat-dot" style="background:${color(j)}"></div>${groups[j].name}
+    </div>
+    <div class="stat-sig ${cls}">${lbl}</div>
+    <div class="stat-p ${cls}">${pStr}</div>
+    <div class="stat-detail">${detail}</div>
+  </div>`;
+}
+
+function runStat(){
+  if(groups.length<2){document.getElementById('stat-card').style.display='none';return;}
+  document.getElementById('stat-card').style.display='block';
+  const s=S();
+  let h='', note='';
+  const allG=groups.map(g=>({name:g.name,logs:getUsedLogs(g,s)})).filter(g=>g.logs.length>=2);
+
+  if(statMethod==='welch'){
+    note='Welch\'s t検定（両側）/ log₁₀変換済みデータ';
+    if(allG.length<2){h='<div style="color:#aaa;font-size:12px">有効データが2群未満です</div>';
+    } else {
+      for(let i=0;i<allG.length;i++) for(let j=i+1;j<allG.length;j++){
+        const gi=groups.findIndex(g=>g.name===allG[i].name);
+        const gj=groups.findIndex(g=>g.name===allG[j].name);
+        const{t,df,p,mx,my}=welchT(allG[i].logs,allG[j].logs);
+        const{lbl,cls}=sigInfo(p);
+        h+=statCard(gi,gj,lbl,cls,`p = ${p<0.001?p.toExponential(2):p.toFixed(4)}`,
+          `${mx.toFixed(2)} vs ${my.toFixed(2)} (log₁₀)<br>t = ${t.toFixed(3)}, df = ${df.toFixed(1)}<br>n = ${allG[i].logs.length} vs ${allG[j].logs.length}`);
+      }
+    }
+  } else if(statMethod==='tukey'){
+    note='Tukey-Kramer法（全ペア比較）/ log₁₀変換済みデータ / Bonferroni近似';
+    if(allG.length<3) note+=' — 3群以上推奨';
+    const res=tukeyKramer(allG);
+    res.forEach(r=>{
+      const gi=groups.findIndex(g=>g.name===allG[r.i].name);
+      const gj=groups.findIndex(g=>g.name===allG[r.j].name);
+      const{lbl,cls}=sigInfo(r.p);
+      h+=statCard(gi,gj,lbl,cls,`p = ${r.p<0.001?r.p.toExponential(2):r.p.toFixed(4)}`,
+        `${r.mi.toFixed(2)} vs ${r.mj.toFixed(2)} (log₁₀)<br>q = ${r.q.toFixed(3)}, df = ${r.df}<br>n = ${allG[r.i].logs.length} vs ${allG[r.j].logs.length}`);
+    });
+  } else if(statMethod==='dunnett'){
+    note='Dunnett検定（Control群 vs 各群）/ log₁₀変換済みデータ / Bonferroni近似';
+    const ctrlIdx=groups.findIndex(g=>g.name==='Control');
+    const ctrl=ctrlIdx>=0?allG.find(g=>g.name==='Control'):allG[0];
+    const ctrlGIdx=ctrlIdx>=0?ctrlIdx:groups.findIndex(g=>g.name===allG[0].name);
+    if(!ctrl||ctrl.logs.length<2){
+      h='<div style="color:#aaa;font-size:12px">Control群が見つかりません（群名を "Control" にしてください）</div>';
+    } else {
+      const treats=allG.filter(g=>g.name!==ctrl.name);
+      const res=dunnett(ctrl.logs,treats);
+      res.forEach(r=>{
+        const gj=groups.findIndex(g=>g.name===treats[r.gi].name);
+        const{lbl,cls}=sigInfo(r.p);
+        h+=statCard(ctrlGIdx,gj,lbl,cls,`p = ${r.p<0.001?r.p.toExponential(2):r.p.toFixed(4)}`,
+          `Control: ${r.mc.toFixed(2)} vs ${r.mt.toFixed(2)} (log₁₀)<br>t = ${r.t.toFixed(3)}, df = ${r.df}<br>n = ${r.nc} vs ${r.nt}`);
+      });
+    }
+  } else {
+    note='Mann-Whitney U検定（参考値）/ 正規近似';
+    for(let i=0;i<allG.length;i++) for(let j=i+1;j<allG.length;j++){
+      const gi=groups.findIndex(g=>g.name===allG[i].name);
+      const gj=groups.findIndex(g=>g.name===allG[j].name);
+      const{u,z,p}=mannW(allG[i].logs,allG[j].logs);
+      const{lbl,cls}=sigInfo(p);
+      const mi=allG[i].logs.reduce((a,b)=>a+b,0)/allG[i].logs.length;
+      const mj=allG[j].logs.reduce((a,b)=>a+b,0)/allG[j].logs.length;
+      h+=statCard(gi,gj,lbl,cls,`p = ${p<0.001?p.toExponential(2):p.toFixed(4)}`,
+        `${mi.toFixed(2)} vs ${mj.toFixed(2)} (log₁₀)<br>U = ${u.toFixed(0)}, Z = ${z.toFixed(2)}<br>n = ${allG[i].logs.length} vs ${allG[j].logs.length}`);
+    }
+  }
+  document.getElementById('stat-pairs').innerHTML=h;
+  document.getElementById('stat-note').textContent=note;
+}
+
+// ── グラフ ──
+function drawGraph(){
+  const gw=document.getElementById('graph-wrap');gw.style.display='block';
+  const s=S();
+  const data=groups.map((g,gi)=>({
+    name:g.name,color:color(gi),
+    logs:getUsedLogs(g,s),
+    individuals:g.animals.map(a=>{
+      const c=a.cols[a.sel];
+      return(c!==null&&!isNaN(c)&&c>0)?Math.log10(calcCFU(c,s.dils[a.sel],s)):null;
+    }).filter(v=>v!==null)
+  })).filter(d=>d.logs.length);
+  if(!data.length){alert('データがありません');return;}
+
+  drawIndividual(document.getElementById('cv1'),data,s);
+  drawGroupComp(document.getElementById('cv2'),data,s);
+  gw.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function prepCanvas(cv){
+  const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+  return{ctx,W,H,ML:58,MR:16,MT:38,MB:52};
+}
+
+function yAxis(ctx,W,H,ML,MR,MT,MB,ymin,ymax){
+  const ph=H-MT-MB;const yr=ymax-ymin;
+  function gy(v){return MT+ph*(1-(v-ymin)/yr);}
+  ctx.strokeStyle='#f0ede8';ctx.lineWidth=1;
+  for(let y=ymin;y<=ymax;y++){
+    const yy=gy(y);
+    ctx.beginPath();ctx.moveTo(ML,yy);ctx.lineTo(W-MR,yy);ctx.stroke();
+    ctx.font='11px Segoe UI';ctx.fillStyle='#aaa';ctx.textAlign='right';
+    ctx.fillText(y,ML-5,yy+4);
+  }
+  ctx.strokeStyle='#d4d0c8';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(ML,MT);ctx.lineTo(ML,H-MB);ctx.lineTo(W-MR,H-MB);ctx.stroke();
+  return gy;
+}
+
+function drawIndividual(cv,data,s){
+  const{ctx,W,H,ML,MR,MT,MB}=prepCanvas(cv);
+  const pw=W-ML-MR;const ph=H-MT-MB;
+  ctx.font='bold 11px Segoe UI';ctx.fillStyle='#1c1c2e';ctx.textAlign='center';
+  ctx.fillText(`個体別 log₁₀ ${s.type} / mL`,W/2,22);
+  ctx.save();ctx.translate(13,H/2);ctx.rotate(-Math.PI/2);
+  ctx.font='10px Segoe UI';ctx.fillStyle='#8a8a9a';ctx.textAlign='center';
+  ctx.fillText(`log₁₀ ${s.type}/mL`,0,0);ctx.restore();
+
+  const allLogs=data.flatMap(d=>d.logs);
+  const ymin=Math.floor(Math.min(...allLogs)-0.3);
+  const ymax=Math.ceil(Math.max(...allLogs)+0.5);
+  const gy=yAxis(ctx,W,H,ML,MR,MT,MB,ymin,ymax);
+  const y0=gy(ymin);
+
+  const totalSlots=data.reduce((a,d)=>a+d.logs.length,0)+(data.length-1);
+  const bw=Math.min(32,pw/(totalSlots+2));
+  let xi=0;
+
+  data.forEach((d,gi)=>{
+    const startXi=xi;
+    d.logs.forEach((v,li)=>{
+      const x=ML+pw*(xi+0.5)/totalSlots;
+      const y=gy(v);
+      ctx.fillStyle=d.color+'cc';ctx.strokeStyle=d.color;ctx.lineWidth=0.8;
+      ctx.fillRect(x-bw/2,y,bw,y0-y);ctx.strokeRect(x-bw/2,y,bw,y0-y);
+      ctx.font='9px Segoe UI';ctx.fillStyle='#aaa';ctx.textAlign='center';
+      ctx.fillText(groups[gi].animals[li]?.name||`#${li+1}`,x,H-MB+14);
+      xi++;
+    });
+    const midX=ML+pw*(startXi+d.logs.length/2)/totalSlots;
+    ctx.font='bold 10px Segoe UI';ctx.fillStyle=d.color;ctx.textAlign='center';
+    ctx.fillText(d.name,midX,H-4);
+    xi++;
+  });
+}
+
+function drawGroupComp(cv,data,s){
+  const{ctx,W,H,ML,MR,MT,MB}=prepCanvas(cv);
+  const pw=W-ML-MR;const ph=H-MT-MB;
+  ctx.font='bold 11px Segoe UI';ctx.fillStyle='#1c1c2e';ctx.textAlign='center';
+  ctx.fillText(`群比較 — Mean ± SEM`,W/2,22);
+  ctx.save();ctx.translate(13,H/2);ctx.rotate(-Math.PI/2);
+  ctx.font='10px Segoe UI';ctx.fillStyle='#8a8a9a';ctx.textAlign='center';
+  ctx.fillText(`log₁₀ ${s.type}/mL`,0,0);ctx.restore();
+
+  const stats=data.map(d=>{
+    const m=d.logs.reduce((a,b)=>a+b,0)/d.logs.length;
+    const sem=d.logs.length>1?Math.sqrt(d.logs.map(v=>(v-m)**2).reduce((a,b)=>a+b,0)/(d.logs.length*(d.logs.length-1))):0;
+    return{m,sem};
+  });
+  const allY=[...data.flatMap(d=>d.logs),...stats.map(st=>st.m+st.sem)];
+  const ymin=Math.floor(Math.min(...allY)-0.3);
+  const ymax=Math.ceil(Math.max(...allY)+0.8);
+  const gy=yAxis(ctx,W,H,ML,MR,MT,MB,ymin,ymax);
+  const y0=gy(ymin);
+  const n=data.length;
+  const bw=Math.min(72,pw/(n*2.2));
+
+  const xs=data.map((_,i)=>ML+pw*(i+0.5)/n);
+
+  data.forEach((d,i)=>{
+    const x=xs[i];const{m,sem}=stats[i];const ym=gy(m);
+    // 棒
+    ctx.fillStyle=d.color+'cc';ctx.strokeStyle=d.color+'aa';ctx.lineWidth=0.8;
+    ctx.fillRect(x-bw/2,ym,bw,y0-ym);ctx.strokeRect(x-bw/2,ym,bw,y0-ym);
+    // SEM
+    const yt=gy(m+sem),yb=gy(m-sem);
+    ctx.strokeStyle='#1c1c2e';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(x,yt);ctx.lineTo(x,yb);ctx.stroke();
+    [yt,yb].forEach(yy=>{ctx.beginPath();ctx.moveTo(x-5,yy);ctx.lineTo(x+5,yy);ctx.stroke();});
+    // 散布点
+    d.logs.forEach(v=>{
+      const jx=x+(Math.random()-0.5)*bw*0.6;
+      ctx.beginPath();ctx.arc(jx,gy(v),3.5,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fill();
+    });
+    // ラベル
+    ctx.font='bold 11px Segoe UI';ctx.fillStyle=d.color;ctx.textAlign='center';
+    ctx.fillText(d.name,x,H-MB+16);
+    ctx.font='10px Segoe UI';ctx.fillStyle='#aaa';
+    ctx.fillText(`n=${d.logs.length}`,x,H-MB+28);
+  });
+
+  // 有意差バー（statMethodに連動）
+  let barLevel=0;
+  for(let i=0;i<data.length;i++){
+    for(let j=i+1;j<data.length;j++){
+      let p;
+      if(statMethod==='mannw'){
+        p=mannW(data[i].logs,data[j].logs).p;
+      } else if(statMethod==='dunnett'&&i===0){
+        const ctrl=data[0].logs,treat=data[j].logs;
+        const allL=[ctrl,...data.slice(1).map(d=>d.logs)];
+        const allM=[ctrl,...data.slice(1).map(d=>d.logs)].map(l=>l.reduce((a,b)=>a+b,0)/l.length);
+        const N=allL.reduce((a,l)=>a+l.length,0);
+        const df=N-data.length;
+        const MSe=allL.map((l,ii)=>l.map(v=>(v-allM[ii])**2).reduce((a,b)=>a+b,0)).reduce((a,b)=>a+b,0)/df;
+        const mc=allM[0],mt=allM[j],se=Math.sqrt(MSe*(1/ctrl.length+1/treat.length));
+        p=Math.min(1,tDist(Math.abs(mc-mt)/se,df)*(data.length-1));
+      } else {
+        p=welchT(data[i].logs,data[j].logs).p;
+      }
+      const{lbl,cls}=sigInfo(p);
+      const maxY=Math.max(...[...data[i].logs,...data[j].logs].map(v=>gy(v)));
+      const barY=Math.min(maxY,gy(ymax-0.1))-14-barLevel*22;
+      ctx.strokeStyle='#666';ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(xs[i],barY+7);ctx.lineTo(xs[i],barY);
+      ctx.lineTo(xs[j],barY);ctx.lineTo(xs[j],barY+7);
+      ctx.stroke();
+      const fc=cls==='s3'?'#1a8030':cls==='s2'?'#cc4400':cls==='s1'?'#e07b5a':'#aaa';
+      ctx.font=`bold ${lbl==='ns'?11:13}px Segoe UI`;ctx.fillStyle=fc;ctx.textAlign='center';
+      ctx.fillText(lbl,(xs[i]+xs[j])/2,barY-2);
+      if(lbl!=='ns'){
+        ctx.font='9px Segoe UI';ctx.fillStyle='#aaa';
+        ctx.fillText(`p=${p<0.001?p.toExponential(1):p.toFixed(3)}`,(xs[i]+xs[j])/2,barY-14);
+      }
+      barLevel++;
+      if(statMethod==='dunnett'&&i!==0) break;
+    }
+  }
+}
+
+// ── エクスポート ──
+function getCSV(){
+  const s=S();
+  const rows=['group,animal_id,animal_name,dilution_step,dilution_factor,colonies,volume_mL,organ_vol_mL,cfu_per_mL,log10_cfu,used'];
+  groups.forEach(g=>g.animals.forEach((a,ai)=>a.cols.forEach((c,di)=>{
+    if(c===null||isNaN(c)||c<=0)return;
+    const f=Math.pow(s.fold,s.dils[di]);const cfu=calcCFU(c,s.dils[di],s);
+    rows.push(`"${g.name}",${ai+1},"${a.name}",${s.dils[di]},${f},${c},${s.vol},${s.orgvol},${cfu.toExponential(4)},${Math.log10(cfu).toFixed(4)},${a.sel===di?1:0}`);
+  })));
+  return rows.join('\n');
+}
+function genCSV(){const b=document.getElementById('code-out');b.style.display='block';b.textContent=getCSV();}
+function copyCSV(){navigator.clipboard.writeText(getCSV()).then(()=>{const b=document.getElementById('code-out');b.style.display='block';b.textContent='✓ コピーしました\n\n'+getCSV();});}
+
+function exportExcel(){
+  const s=S();
+  const wb=XLSX.utils.book_new();
+
+  // ── シート1: 採用値データ ──
+  const hdr=['group','animal_id','animal_name','dilution_step','dilution_factor',
+             'colonies','volume_mL','organ_vol_mL','cfu_per_mL','log10_cfu','used'];
+  const rows=[hdr];
+  groups.forEach(g=>g.animals.forEach((a,ai)=>a.cols.forEach((c,di)=>{
+    if(c===null||isNaN(c)||c<=0)return;
+    const f=Math.pow(s.fold,s.dils[di]);const cfu=calcCFU(c,s.dils[di],s);
+    rows.push([g.name,ai+1,a.name,s.dils[di],f,c,s.vol,s.orgvol,
+               parseFloat(cfu.toExponential(4)),parseFloat(Math.log10(cfu).toFixed(4)),a.sel===di?1:0]);
+  })));
+  const ws1=XLSX.utils.aoa_to_sheet(rows);
+
+  // 列幅設定
+  ws1['!cols']=[{wch:14},{wch:10},{wch:12},{wch:14},{wch:16},
+                {wch:10},{wch:12},{wch:14},{wch:14},{wch:10},{wch:6}];
+
+  // ヘッダー行を太字に（セルスタイル）
+  hdr.forEach((_,ci)=>{
+    const addr=XLSX.utils.encode_cell({r:0,c:ci});
+    if(!ws1[addr]) return;
+    ws1[addr].s={font:{bold:true},fill:{fgColor:{rgb:'D5E8F0'}},
+                 alignment:{horizontal:'center'}};
+  });
+
+  XLSX.utils.book_append_sheet(wb,ws1,'data');
+
+  // ── シート2: 群別サマリー ──
+  const sumRows=[['group','n','mean_log10_cfu','sem','min','max']];
+  groups.forEach(g=>{
+    const logs=getUsedLogs(g,s);
+    if(!logs.length){sumRows.push([g.name,0,'','','','']);return;}
+    const m=logs.reduce((a,b)=>a+b,0)/logs.length;
+    const sem=logs.length>1?Math.sqrt(logs.map(v=>(v-m)**2).reduce((a,b)=>a+b,0)/(logs.length*(logs.length-1))):0;
+    sumRows.push([g.name,logs.length,
+                  parseFloat(m.toFixed(4)),parseFloat(sem.toFixed(4)),
+                  parseFloat(Math.min(...logs).toFixed(4)),parseFloat(Math.max(...logs).toFixed(4))]);
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(sumRows);
+  ws2['!cols']=[{wch:14},{wch:5},{wch:16},{wch:10},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws2,'summary');
+
+  // ── シート3: 検定結果 ──
+  if(groups.length>=2){
+    const methodName={'welch':'Welch t-test','tukey':'Tukey-Kramer','dunnett':'Dunnett','mannw':'Mann-Whitney U'}[statMethod]||'Welch t-test';
+    const allG=groups.map(g=>({name:g.name,logs:getUsedLogs(g,s)})).filter(g=>g.logs.length>=2);
+    let statRows;
+    if(statMethod==='welch'||statMethod==='mannw'){
+      statRows=[['group_1','group_2','n1','n2','mean1','mean2','statistic','df_or_Z','p_value','significance','method']];
+      for(let i=0;i<allG.length;i++) for(let j=i+1;j<allG.length;j++){
+        const li=allG[i].logs,lj=allG[j].logs;
+        const mi=li.reduce((a,b)=>a+b,0)/li.length,mj=lj.reduce((a,b)=>a+b,0)/lj.length;
+        let stat,df2,p;
+        if(statMethod==='welch'){const r=welchT(li,lj);stat=r.t;df2=r.df;p=r.p;}
+        else{const r=mannW(li,lj);stat=r.u;df2=r.z;p=r.p;}
+        const{lbl}=sigInfo(p);
+        statRows.push([allG[i].name,allG[j].name,li.length,lj.length,
+                       parseFloat(mi.toFixed(4)),parseFloat(mj.toFixed(4)),
+                       parseFloat(stat.toFixed(3)),parseFloat(df2.toFixed(2)),
+                       parseFloat(p.toFixed(6)),lbl,methodName]);
+      }
+    } else if(statMethod==='tukey'){
+      statRows=[['group_1','group_2','n1','n2','mean1','mean2','q','df','p_value','significance','method']];
+      tukeyKramer(allG).forEach(r=>{
+        const{lbl}=sigInfo(r.p);
+        statRows.push([allG[r.i].name,allG[r.j].name,allG[r.i].logs.length,allG[r.j].logs.length,
+                       parseFloat(r.mi.toFixed(4)),parseFloat(r.mj.toFixed(4)),
+                       parseFloat(r.q.toFixed(3)),r.df,parseFloat(r.p.toFixed(6)),lbl,methodName]);
+      });
+    } else {
+      const ctrl=allG[0];
+      const treats=allG.slice(1);
+      statRows=[['control','treatment','n_ctrl','n_treat','mean_ctrl','mean_treat','t','df','p_value','significance','method']];
+      dunnett(ctrl.logs,treats).forEach(r=>{
+        const{lbl}=sigInfo(r.p);
+        statRows.push([ctrl.name,treats[r.gi].name,r.nc,r.nt,
+                       parseFloat(r.mc.toFixed(4)),parseFloat(r.mt.toFixed(4)),
+                       parseFloat(r.t.toFixed(3)),r.df,parseFloat(r.p.toFixed(6)),lbl,methodName]);
+      });
+    }
+    const ws3=XLSX.utils.aoa_to_sheet(statRows);
+    ws3['!cols']=statRows[0].map(()=>({wch:14}));
+    XLSX.utils.book_append_sheet(wb,ws3,'stat');
+  }
+
+  // ── 設定シート ──
+  const cfgRows=[
+    ['設定','値'],
+    ['種別',s.type],
+    ['希釈倍率/段階',s.fold+'倍'],
+    ['希釈段階1',`10^-${s.dils[0]}`],
+    ['希釈段階2',`10^-${s.dils[1]}`],
+    ['希釈段階3',`10^-${s.dils[2]}`],
+    ['接種量(mL)',s.vol],
+    ['臓器液量(mL)',s.orgvol],
+    ['出力日時',new Date().toLocaleString('ja-JP')],
+  ];
+  const ws4=XLSX.utils.aoa_to_sheet(cfgRows);
+  ws4['!cols']=[{wch:16},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws4,'settings');
+
+  // ダウンロード
+  const date=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb,`CFU_data_${date}.xlsx`);
+}
+
+function genR(){
+  const s=S();const b=document.getElementById('code-out');b.style.display='block';
+  b.textContent=`library(ggplot2)\nlibrary(dplyr)\nlibrary(ggpubr)\n\ndf <- read.csv("cfu_data.csv")\ndf_used <- df %>% filter(used == 1)\n\nggplot(df_used, aes(x=group, y=log10_cfu, fill=group)) +\n  geom_bar(stat="summary", fun="mean", width=0.6,\n           color="black", linewidth=0.5, alpha=0.85) +\n  stat_summary(fun.data=mean_se, geom="errorbar", width=0.25, linewidth=0.8) +\n  geom_jitter(width=0.08, size=2.5, alpha=0.75, color="black") +\n  stat_compare_means(method="wilcox.test", label="p.signif") +\n  labs(title="${s.type} count", x=NULL, y="log10 ${s.type} / mL",\n       caption="Mann-Whitney U test  Error bars = SEM") +\n  theme_classic(base_size=13) +\n  theme(legend.position="none", plot.title=element_text(face="bold"))`;
+}
+
+function genPy(){
+  const s=S();const b=document.getElementById('code-out');b.style.display='block';
+  const cmap=JSON.stringify(Object.fromEntries(groups.map((g,i)=>[g.name,PALETTE[i%PALETTE.length]])));
+  b.textContent=`import pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\nfrom scipy import stats\n\ndf = pd.read_csv("cfu_data.csv")\ndf_used = df[df["used"] == 1]\ngroups = df_used["group"].unique()\nCOLORS = ${cmap}\n\ndef sig(p):\n    if p<0.001: return "***"\n    if p<0.01:  return "**"\n    if p<0.05:  return "*"\n    return "ns"\n\nfig, axes = plt.subplots(1, 2, figsize=(12, 5))\nfig.patch.set_facecolor("white")\n\nfor ax_idx, (ax, title) in enumerate(zip(axes, ["Individual", "Group comparison"])):\n    ax.set_facecolor("white")\n    ax.spines["top"].set_visible(False)\n    ax.spines["right"].set_visible(False)\n    ax.set_ylabel("log10 ${s.type} / mL")\n    ax.set_title(title, fontweight="bold")\n\n    if ax_idx == 0:\n        xi = 0\n        for gi, grp in enumerate(groups):\n            vals = df_used[df_used["group"]==grp]["log10_cfu"].values\n            c = COLORS.get(grp, "#888")\n            for v in vals:\n                ax.bar(xi, v, width=0.7, color=c, edgecolor="black", linewidth=0.6, alpha=0.85)\n                xi += 1\n            xi += 0.5\n    else:\n        for i, grp in enumerate(groups):\n            vals = df_used[df_used["group"]==grp]["log10_cfu"].values\n            m = np.mean(vals)\n            sem = np.std(vals,ddof=1)/np.sqrt(len(vals))\n            c = COLORS.get(grp, "#888")\n            ax.bar(i, m, width=0.6, color=c, edgecolor="black", linewidth=0.8, alpha=0.85)\n            ax.errorbar(i, m, yerr=sem, fmt="none", color="black", capsize=5, linewidth=1.2)\n            ax.scatter(np.random.normal(i,0.08,len(vals)), vals, color="black", s=30, alpha=0.8, zorder=4)\n        ax.set_xticks(range(len(groups)))\n        ax.set_xticklabels(groups)\n        if len(groups) == 2:\n            g1=df_used[df_used["group"]==groups[0]]["log10_cfu"].values\n            g2=df_used[df_used["group"]==groups[1]]["log10_cfu"].values\n            _,p=stats.mannwhitneyu(g1,g2,alternative="two-sided")\n            yb=max(g1.max(),g2.max())+0.15\n            ax.plot([0,0,1,1],[yb,yb+0.08,yb+0.08,yb],color="black",linewidth=1)\n            ax.text(0.5,yb+0.1,sig(p),ha="center",fontsize=13,fontweight="bold")\n\nplt.tight_layout()\nplt.savefig("cfu_plot.png", dpi=180, bbox_inches="tight", facecolor="white")\nplt.show()`;
+}
+
+function renderAll(){updateSubs();renderGroupList();renderGrid();renderSummary();runStat();}
+
+initGroups();
+</script>
+</body>
+</html>
