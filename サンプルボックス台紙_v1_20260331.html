@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>サンプルボックス台紙 v5</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#eeecea;font-size:13px;color:#1c1c2e}
+.panel{background:#fff;border-bottom:1px solid #d4d0c8;padding:10px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.plabel{font-size:10px;color:#8a8a9a;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px}
+.btn{height:30px;padding:0 12px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#1c1c2e;font-size:12px;cursor:pointer}
+.btn:hover{background:#f4f4f4}
+.btn-purple{border-color:#8855cc;color:#5522aa;background:#f8f0ff}
+
+/* 株ごとの色パレット */
+.sc-0{background:#dce8f8!important;border-left:3px solid #5a8fc2}
+.sc-1{background:#fde8dc!important;border-left:3px solid #e07b5a}
+.sc-2{background:#dcf4dc!important;border-left:3px solid #3fb950}
+.sc-3{background:#f0dcf8!important;border-left:3px solid #c080d8}
+.sc-4{background:#faf0dc!important;border-left:3px solid #e8a030}
+.sc-5{background:#dcf4f0!important;border-left:3px solid #20a090}
+.sc-6{background:#f8dcdc!important;border-left:3px solid #e06080}
+.sc-7{background:#f0f4dc!important;border-left:3px solid #a0b830}
+.sc-0:hover{background:#c8d8f0!important}
+.sc-1:hover{background:#f8d4c4!important}
+.sc-2:hover{background:#c8ecc8!important}
+.sc-3:hover{background:#e4c8f0!important}
+.sc-4:hover{background:#f4e0c4!important}
+.sc-5:hover{background:#c8ece8!important}
+.sc-6:hover{background:#f4c4c4!important}
+.sc-7:hover{background:#e4ecb8!important}
+
+/* 凡例 */
+.legend{display:flex;flex-wrap:wrap;gap:6px;padding:6px 16px;background:#fff;border-bottom:1px solid #e0ddd8;min-height:28px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid #e0ddd8;cursor:pointer;user-select:none}
+.legend-item:hover{border-color:#aaa}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.legend-empty{font-size:11px;color:#aaa;padding:4px 0}
+
+/* 色フィルター */
+.color-chips{display:flex;flex-wrap:wrap;gap:5px}
+.color-chip{width:18px;height:18px;border-radius:3px;border:2px solid transparent;cursor:pointer;flex-shrink:0}
+.color-chip.active{border-color:#1c1c2e}
+.color-chip.chip-all{background:#e0ddd8;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#555;width:auto;padding:0 6px}
+
+/* 抽出モーダル */
+.ext-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:150}
+.ext-overlay.open{display:flex}
+.ext-modal{background:#fff;border-radius:12px;padding:20px;width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,0.2)}
+.ext-modal h3{font-size:13px;font-weight:700;margin-bottom:12px}
+.ext-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e0ddd8}
+.ext-filters label{font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer}
+.ext-table-wrap{flex:1;overflow-y:auto;margin-bottom:12px}
+.ext-table{width:100%;border-collapse:collapse;font-size:11px}
+.ext-table th{background:#f0f4ff;color:#1a3a88;font-weight:600;padding:5px 8px;border:1px solid #c0d0f0;text-align:center;position:sticky;top:0}
+.ext-table td{padding:4px 8px;border:1px solid #e0ddd8;text-align:center}
+.ext-table tr:nth-child(even) td{background:#f8f8fc}
+.ext-count{font-size:11px;color:#8a8a9a;margin-bottom:8px}
+.ext-btns{display:flex;gap:8px;justify-content:flex-end}
+.ext-btns button{height:30px;padding:0 14px;border:1px solid #ccc;border-radius:6px;font-size:12px;cursor:pointer;background:#fff}
+.ext-btns .dl-csv{border-color:#3fb950;color:#1a6030;font-weight:600;background:#f4faf5}
+.ext-btns .dl-xl{border-color:#5a8fc2;color:#1a3a88;background:#f0f4ff;font-weight:600}
+.inp{height:30px;border:1px solid #ccc;border-radius:6px;padding:0 8px;font-size:12px;background:#fff;color:#1c1c2e}
+.inp:focus{outline:none;border-color:#5a8fc2}
+.sep{width:1px;background:#e0ddd8;align-self:stretch;margin:0 4px}
+
+/* Excelリストパネル */
+.xl-bar{background:#f0f4ff;border-bottom:1px solid #c0d0f0;padding:8px 16px;display:none}
+.xl-bar.show{display:block}
+.xl-bar h4{font-size:11px;font-weight:700;color:#1a3a88;margin-bottom:6px}
+.xl-list{display:flex;flex-wrap:wrap;gap:5px;max-height:90px;overflow-y:auto;margin-bottom:5px}
+.xl-item{padding:3px 10px;border:1px solid #c0d0f0;border-radius:4px;font-size:11px;cursor:pointer;background:#fff;user-select:none}
+.xl-item:hover{background:#e0e8fc}
+.xl-item.sel{background:#1a3a88;color:#fff;border-color:#1a3a88}
+.xl-hint{font-size:10px;color:#8a8a9a}
+.xl-tab{height:26px;padding:0 12px;border:none;background:transparent;color:#8a8a9a;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.xl-tab.active{color:#1a3a88;border-bottom-color:#1a3a88;font-weight:600}
+.xl-colored-item{padding:3px 10px;border:1px solid #e0ddd8;border-radius:4px;font-size:11px;cursor:pointer;background:#fff;user-select:none;display:flex;align-items:center;gap:5px}
+.xl-colored-item:hover{background:#f0f4ff}
+.xl-colored-item.sel{background:#1a3a88;color:#fff;border-color:#1a3a88}
+.xl-colored-item .swatch{width:10px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,0.15);flex-shrink:0}
+
+/* ヒントバー */
+.hint{background:#fffbe8;border-bottom:1px solid #e8d870;padding:6px 16px;font-size:11px;color:#5a4a00;display:none}
+.hint.show{display:block}
+
+.preview{padding:16px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.sheet{background:#fff;border:1.5px solid #333;width:120mm;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.stitle{font-size:9px;color:#aaa;text-align:center;padding:2px 0;border-bottom:1px solid #e0ddd8;background:#f8f7f4}
+.grid{display:grid;border-top:1.5px solid #333;border-left:1.5px solid #333}
+.col-header{border-right:1px solid #555;border-bottom:1px solid #555;height:8mm;display:flex;align-items:center;justify-content:center;font-size:7pt;font-weight:700;color:#8a8a9a;cursor:pointer;user-select:none;background:#f8f7f4;transition:background 0.1s}
+.col-header:hover{background:#e8e4dc}
+.col-header.skipped{background:#fff0f0;color:#cc4444;text-decoration:line-through}
+.cell{border-right:1px solid #555;border-bottom:1px solid #555;height:12mm;display:flex;flex-direction:column;justify-content:flex-end;padding:1px 2px;cursor:pointer;transition:background 0.1s;user-select:none}
+.cell:hover{background:#f0f4ff}
+.cell.filled{background:#f4faf5}
+.cell.sel{background:#dde8ff!important;outline:2px solid #1a3a88;outline-offset:-2px;z-index:1}
+.cpos{font-size:5pt;color:#ccc;line-height:1.2}
+.cmain{font-size:6.5pt;color:#1c1c2e;font-weight:700;line-height:1.3;overflow-wrap:break-word;word-break:break-word;overflow:hidden;max-width:100%}
+.footer{border-left:1.5px solid #333;display:grid;grid-template-columns:22mm 1fr}
+.fl{border-right:1px solid #555;border-bottom:1px solid #555;padding:2px 4px;font-size:7pt;display:flex;align-items:center;letter-spacing:2px;min-height:8mm;background:#f8f7f4}
+.fv{border-right:1.5px solid #333;border-bottom:1px solid #555;padding:2px 6px;min-height:8mm;display:flex;align-items:center}
+.fm{border-right:1.5px solid #333;border-bottom:1.5px solid #333;padding:2px 6px;font-size:7pt;min-height:9mm;display:flex;align-items:center;justify-content:space-between}
+.cdj{font-size:5pt;color:#ccc}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:none;align-items:center;justify-content:center;z-index:100}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:10px;padding:18px 20px;width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.modal h3{font-size:13px;font-weight:700;margin-bottom:12px}
+.mf{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.mf label{font-size:11px;color:#8a8a9a}
+.mf input{height:30px;border:1px solid #ccc;border-radius:6px;padding:0 8px;font-size:12px}
+.mf input:focus{outline:none;border-color:#5a8fc2}
+.mbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.mbtns button{height:30px;padding:0 14px;border:1px solid #ccc;border-radius:6px;font-size:12px;cursor:pointer;background:#fff}
+.mbtns .ok{background:#1a3a88;color:#fff;border-color:#1a3a88;font-weight:600}
+.mbtns .clr{border-color:#e07070;color:#8a2020}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c1c2e;color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:200}
+.toast.show{opacity:1}
+
+@media print{
+  body{background:white}
+  .panel,.xl-bar,.hint,.stitle{display:none!important}
+  .overlay,.toast,.legend{display:none!important}
+  .preview{padding:6mm;gap:8mm}
+  .sheet{box-shadow:none;page-break-inside:avoid;width:120mm!important}
+  .sheet.no-data{display:none!important}
+  .cell.sel{outline:none!important;background:inherit!important}
+  .cell.filled{background:#f4faf5!important}
+  .sc-0,.sc-1,.sc-2,.sc-3,.sc-4,.sc-5,.sc-6,.sc-7{border-left:3px solid #999!important}
+  @page{size:A4;margin:10mm}
+}
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <div>
+    <div class="plabel">ボックスサイズ</div>
+    <div style="display:flex;gap:5px;align-items:center">
+      <select class="inp" id="box-size" onchange="changeBoxSize()" style="width:90px">
+        <option value="9">9×9</option>
+        <option value="8">8×8</option>
+        <option value="10">10×10</option>
+        <option value="0">カスタム</option>
+      </select>
+      <span id="custom-size-wrap" style="display:none">
+        <input type="number" id="custom-cols" min="1" max="15" value="9" class="inp" style="width:42px" placeholder="列">
+        <span style="font-size:11px;color:#aaa">×</span>
+        <input type="number" id="custom-rows" min="1" max="26" value="9" class="inp" style="width:42px" placeholder="行">
+      </span>
+      <button class="btn" id="apply-size-btn" style="display:none;height:28px;font-size:11px" onclick="applyCustomSize()">適用</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <div>
+    <div class="plabel">シート数</div>
+    <select class="inp" id="sc" onchange="build()" style="width:110px">
+      <option value="1">1枚</option><option value="2">2枚</option>
+      <option value="4" selected>4枚（A4×1）</option><option value="8">8枚（A4×2）</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <div>
+    <div class="plabel">貼り付け方向</div>
+    <select class="inp" id="dir" style="width:140px">
+      <option value="col">列方向（A→B→C…）</option>
+      <option value="row">行方向（1→2→3…）</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <div style="font-size:11px;color:#555;line-height:1.8">
+    <b>直接入力</b>：セルを2回クリック<br>
+    <b>Ctrl+V</b>：開始セル1クリック（青）→ Ctrl+V<br>
+    <b>Excelファイル</b>：ファイルを開いてリストから選択→セルに配置
+  </div>
+  <div class="sep"></div>
+  <div>
+    <div class="plabel">Excelファイルから読み込み</div>
+    <div style="display:flex;gap:6px">
+      <input type="file" id="xlf" accept=".xlsx,.xls" style="display:none" onchange="loadXL(this)">
+      <button class="btn btn-blue" onclick="document.getElementById('xlf').click()">📂 Excelを開く</button>
+      <button class="btn btn-red" onclick="clearAll()">全消去</button>
+      <button class="btn btn-purple" onclick="openExtract()">📋 セル抽出</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <button class="btn btn-green" onclick="window.print()">🖨️ 印刷</button>
+</div>
+
+<!-- Excelリストパネル -->
+<div class="legend" id="legend"><span class="legend-empty">株名を入力すると色が自動で付きます</span></div>
+<div class="xl-bar" id="xl-bar">
+  <div style="display:flex;gap:0;border-bottom:1px solid #c0d0f0;margin-bottom:8px">
+    <button class="xl-tab active" id="tab-all" onclick="switchXlTab('all')">全セル</button>
+    <button class="xl-tab" id="tab-colored" onclick="switchXlTab('colored')">🎨 色付きセルのみ</button>
+  </div>
+  <div id="xl-all-panel">
+    <div style="font-size:11px;color:#1a3a88;font-weight:700;margin-bottom:6px">読み込んだ株名 — 選択（青）してセルをクリックで配置</div>
+    <div class="xl-list" id="xl-list"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      <div class="xl-hint">※ 複数選択した場合は先頭の1件が配置されます</div>
+      <button class="btn btn-blue" style="height:24px;font-size:11px;margin-left:auto" onclick="bulkPlace('all')">▶ 開始セルから一括配置</button>
+    </div>
+  </div>
+  <div id="xl-colored-panel" style="display:none">
+    <div style="font-size:11px;color:#1a3a88;font-weight:700;margin-bottom:6px">🎨 色付きセルを検出 — 選択（青）してセルをクリックで配置</div>
+    <div id="xl-colored-summary" style="font-size:10px;color:#8a8a9a;margin-bottom:6px"></div>
+    <div class="xl-list" id="xl-colored-list"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      <div class="xl-hint">Excelのセル背景色を検出しています。白・無色のセルは除外されます</div>
+      <button class="btn btn-blue" style="height:24px;font-size:11px;margin-left:auto" onclick="bulkPlace('colored')">▶ 開始セルから一括配置</button>
+    </div>
+  </div>
+</div>
+
+<div class="hint" id="hint"></div>
+<div class="preview" id="preview"></div>
+
+<div class="overlay" id="ov" onclick="ovClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="mtitle">セルを編集</h3>
+    <div class="mf"><label>株名</label><input id="minp" placeholder="例: MAV17"></div>
+    <div class="mbtns">
+      <button class="clr" onclick="clrCell()">消去</button>
+      <button onclick="closeMod()">キャンセル</button>
+      <button class="ok" onclick="saveCell()">保存</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- 抽出モーダル -->
+<div class="ext-overlay" id="ext-ov" onclick="extOvClick(event)">
+  <div class="ext-modal" onclick="event.stopPropagation()">
+    <h3>📋 入力済みセルの抽出</h3>
+    <div class="ext-filters">
+      <span style="font-size:11px;color:#6a6a7a;font-weight:600;margin-right:4px">ボックス：</span>
+      <label id="box-all-label"><input type="checkbox" id="box-all" checked onchange="toggleBoxAll()"> すべて</label>
+      <span id="box-checks"></span>
+      <span style="margin-left:12px;font-size:11px;color:#6a6a7a;font-weight:600">株名：</span>
+      <input class="inp" id="strain-filter" placeholder="例: MAV17（空欄=全て）" style="width:160px;height:26px;font-size:11px">
+      <span style="margin-left:12px;font-size:11px;color:#6a6a7a;font-weight:600">色：</span>
+      <div class="color-chips" id="color-chips"></div>
+    </div>
+    <div class="ext-count" id="ext-count"></div>
+    <div class="ext-table-wrap">
+      <table class="ext-table" id="ext-table">
+        <thead><tr><th>ボックス</th><th>位置</th><th>株名</th><th>色</th></tr></thead>
+        <tbody id="ext-tbody"></tbody>
+      </table>
+    </div>
+    <div class="ext-btns">
+      <button onclick="closeExtract()">閉じる</button>
+      <button class="dl-csv" onclick="downloadCSV()">CSVダウンロード</button>
+      <button class="dl-xl" onclick="downloadXL()">Excelダウンロード</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── サイズ・スキップ管理 ──
+let boxCols=9,boxRows=9;
+let skipCols=new Set(); // スキップする列インデックス(0始まり)
+
+function getCols(){return Array.from({length:boxCols},(_,i)=>String(i+1));}
+function getRows(){
+  const alpha='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  return Array.from({length:boxRows},(_,i)=>alpha[i]);
+}
+
+function changeBoxSize(){
+  const v=document.getElementById('box-size').value;
+  const cw=document.getElementById('custom-size-wrap');
+  const ab=document.getElementById('apply-size-btn');
+  if(v==='0'){cw.style.display='inline-flex';ab.style.display='inline-block';return;}
+  cw.style.display='none';ab.style.display='none';
+  boxCols=boxRows=parseInt(v);
+  skipCols=new Set();D={};
+  for(let i=0;i<n;i++) D[i]={};
+  render();
+}
+
+function applyCustomSize(){
+  boxCols=Math.min(15,Math.max(1,parseInt(document.getElementById('custom-cols').value)||9));
+  boxRows=Math.min(26,Math.max(1,parseInt(document.getElementById('custom-rows').value)||9));
+  skipCols=new Set();D={};
+  for(let i=0;i<n;i++) D[i]={};
+  render();
+}
+
+function toggleSkipCol(ci){
+  if(skipCols.has(ci)) skipCols.delete(ci);
+  else skipCols.add(ci);
+  render();
+  toast(skipCols.has(ci)?`列 ${ci+1} をスキップ`:`列 ${ci+1} のスキップを解除`);
+}
+
+function orderedCells(dir){
+  const cols=getCols(),rows=getRows();
+  if(dir==='col'){const r=[];cols.forEach((c,ci)=>{if(!skipCols.has(ci))rows.forEach(row=>r.push(c+row));});return r;}
+  const r=[];rows.forEach(row=>cols.forEach((c,ci)=>{if(!skipCols.has(ci))r.push(c+row);}));return r;
+}
+
+let D={};let n=4;let et=null;let sel=null;
+let xlItems=[];let selXl=new Set();
+
+function build(){
+  n=parseInt(document.getElementById('sc').value);
+  for(let i=0;i<n;i++) if(!D[i]) D[i]={};
+  render();
+}
+
+function render(){
+  const pv=document.getElementById('preview');pv.innerHTML='';
+  for(let si=0;si<n;si++) pv.appendChild(mkSheet(si));
+}
+
+function mkSheet(si){
+  const cols=getCols(),rows=getRows();
+  const w=document.createElement('div');w.className='sheet';
+  // 入力データがあるか判定 → なければ印刷時非表示
+  const hasData=D[si]&&Object.values(D[si]).some(d=>d?.main);
+  if(!hasData) w.classList.add('no-data');
+  w.style.width=`${Math.min(120,Math.round(boxCols*120/9))}mm`;
+  const t=document.createElement('div');t.className='stitle';t.textContent=`ボックス ${si+1}`;w.appendChild(t);
+
+  const g=document.createElement('div');g.className='grid';
+  g.style.gridTemplateColumns=`repeat(${boxCols},1fr)`;
+
+  // 列ヘッダー行（クリックでスキップ切り替え）
+  cols.forEach((c,ci)=>{
+    const hdr=document.createElement('div');
+    hdr.className='col-header'+(skipCols.has(ci)?' skipped':'');
+    hdr.textContent=c;
+    hdr.title=skipCols.has(ci)?`列${c}: クリックでスキップ解除`:`列${c}: クリックでスキップ`;
+    hdr.onclick=()=>toggleSkipCol(ci);
+    g.appendChild(hdr);
+  });
+
+  // セル行
+  rows.forEach(r=>cols.forEach((c,ci)=>{
+    const pos=c+r;const d=D[si]?.[pos];
+    const isSel=sel&&sel.si===si&&sel.pos===pos;
+    const isSkip=skipCols.has(ci);
+    const ci2=d?.main?getStrainColor(d.main):-1;
+    let cls='cell';
+    if(isSkip) cls+=' cell-skip';
+    else if(isSel) cls+=' sel';
+    else if(ci2>=0) cls+=` sc-${ci2}`;
+    else if(d?.main) cls+=' filled';
+    const cell=document.createElement('div');
+    cell.className=cls;
+    if(isSkip){
+      cell.style.cssText='border-right:1px solid #555;border-bottom:1px solid #555;height:12mm;background:repeating-linear-gradient(45deg,#f8f4f4,#f8f4f4 3px,#fff0f0 3px,#fff0f0 6px);cursor:not-allowed';
+    }
+    const pe=document.createElement('div');pe.className='cpos';pe.textContent=pos;
+    const me=document.createElement('div');me.className='cmain';
+    // ハイフン・数字とアルファベットの境界に改行ヒント(ZWSP)を挿入
+    const raw=isSkip?'':d?.main||'';
+    me.innerHTML=raw.replace(/(-)/g,'$1\u200B').replace(/([A-Za-z])(\d)/g,'$1\u200B$2').replace(/(\d)([A-Za-z])/g,'$1\u200B$2');
+    cell.appendChild(pe);cell.appendChild(me);
+    if(!isSkip) cell.onclick=()=>onClick(si,pos);
+    g.appendChild(cell);
+  }));
+
+  w.appendChild(g);
+  const f=document.createElement('div');f.className='footer';
+  ['年 月 日','メ　モ'].forEach((lbl,i)=>{
+    const fl=document.createElement('div');fl.className='fl';fl.textContent=lbl;
+    const fv=document.createElement('div');fv.className=i===0?'fv':'fm';fv.contentEditable='true';
+    if(i===1){const cdj=document.createElement('span');cdj.className='cdj';cdj.textContent='C.D.J';cdj.contentEditable='false';fv.appendChild(cdj);}
+    f.appendChild(fl);f.appendChild(fv);
+  });
+  w.appendChild(f);return w;
+}
+
+function onClick(si,pos){
+  // 一括配置の開始セル待ち状態
+  if(pendingBulk!==null){
+    sel={si,pos};
+    bulkPlace(pendingBulk);
+    return;
+  }
+  // Excelリストから選択中があれば配置
+  if(selXl.size>0){
+    const item=[...selXl][0];
+    if(!D[si])D[si]={};
+    D[si][pos]={main:item};
+    render();
+    showHint(`${item} を ${pos}（ボックス${si+1}）に配置しました`);
+    return;
+  }
+  // 2回クリックで編集モーダル
+  if(sel&&sel.si===si&&sel.pos===pos){
+    openMod(si,pos);
+  } else {
+    sel={si,pos};render();
+    toast(`${pos}（ボックス${si+1}）を選択 — Ctrl+V で貼り付け、もう一度クリックで直接編集`);
+  }
+}
+
+// ── Ctrl+V 貼り付け ──
+document.addEventListener('paste',e=>{
+  if(document.getElementById('ov').classList.contains('open'))return;
+  if(!sel)return;
+  e.preventDefault();
+  const txt=e.clipboardData.getData('text/plain');
+  if(!txt.trim())return;
+  const vals=txt.trim().split(/\r?\n/).flatMap(r=>r.split('\t')).map(v=>v.trim()).filter(v=>v);
+  if(!vals.length)return;
+  const dir=document.getElementById('dir').value;
+  const ord=orderedCells(dir);
+  let si=sel.si,idx=ord.indexOf(sel.pos);if(idx<0)idx=0;
+  vals.forEach(v=>{
+    if(idx>=ord.length){si++;idx=0;}
+    if(si>=n)return;
+    if(!D[si])D[si]={};
+    D[si][ord[idx]]={main:v};idx++;
+  });
+  render();
+  showHint(`${vals.length}件 を貼り付けました（${vals.slice(0,6).join('、')}${vals.length>6?'…':''}）`);
+});
+
+// ── Excelファイル読み込み ──
+let coloredItems=[]; // {value, bgColor, hexColor}
+
+function switchXlTab(tab){
+  document.getElementById('tab-all').classList.toggle('active',tab==='all');
+  document.getElementById('tab-colored').classList.toggle('active',tab==='colored');
+  document.getElementById('xl-all-panel').style.display=tab==='all'?'block':'none';
+  document.getElementById('xl-colored-panel').style.display=tab==='colored'?'block':'none';
+}
+
+function isWhiteOrEmpty(hex){
+  if(!hex) return true;
+  const h=hex.toUpperCase().replace('#','');
+  if(h==='FFFFFF'||h==='FF000000'||h==='000000'||h.length===0) return true;
+  // 白に近い色（255,255,255に近い）を除外
+  if(h.length===6){
+    const r=parseInt(h.slice(0,2),16);
+    const g=parseInt(h.slice(2,4),16);
+    const b=parseInt(h.slice(4,6),16);
+    if(r>240&&g>240&&b>240) return true;
+  }
+  return false;
+}
+
+function hexToRgb(hex){
+  const h=(hex||'').replace('#','').toUpperCase();
+  if(h.length===6) return `#${h}`;
+  if(h.length===8) return `#${h.slice(2)}`; // ARGB形式
+  return '#cccccc';
+}
+
+function loadXL(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      // cellStylesオプションで色情報を取得
+      const wb=XLSX.read(e.target.result,{type:'array',cellStyles:true});
+      const allItems=new Set();
+      const colored=[];
+
+      wb.SheetNames.forEach(name=>{
+        const ws=wb.Sheets[name];
+        const range=XLSX.utils.decode_range(ws['!ref']||'A1');
+        for(let R=range.s.r;R<=range.e.r;R++){
+          for(let C=range.s.c;C<=range.e.c;C++){
+            const addr=XLSX.utils.encode_cell({r:R,c:C});
+            const cell=ws[addr];
+            if(!cell) continue;
+            const v=String(cell.v||'').trim();
+            if(!v||v.length<2||v.length>30||/^\d+(\.\d+)?$/.test(v)) continue;
+            allItems.add(v);
+
+            // 背景色を取得
+            const bgColor=cell.s?.fgColor?.rgb||cell.s?.bgColor?.rgb||
+                          cell.s?.patternFgColor?.rgb||cell.s?.fill?.fgColor?.rgb||'';
+            if(bgColor&&!isWhiteOrEmpty(bgColor)){
+              colored.push({value:v, hexColor:hexToRgb(bgColor), raw:bgColor});
+            }
+          }
+        }
+      });
+
+      xlItems=[...allItems].slice(0,300);
+      // 色付きセル：重複除去して値+色で管理
+      const seen=new Map();
+      colored.forEach(item=>{
+        if(!seen.has(item.value)) seen.set(item.value,item);
+      });
+      coloredItems=[...seen.values()];
+
+      selXl=new Set();
+      renderXlList();
+      renderColoredList();
+      document.getElementById('xl-bar').classList.add('show');
+      document.getElementById('xl-colored-summary').textContent=
+        `${coloredItems.length}件の色付きセルを検出（全${xlItems.length}件中）`;
+      toast(`${coloredItems.length}件の色付きセルを検出しました`);
+      // 色付きが1件以上あれば自動でそちらのタブを表示
+      if(coloredItems.length>0) switchXlTab('colored');
+    }catch(err){alert('読み込みエラー: '+err.message);console.error(err);}
+  };
+  reader.readAsArrayBuffer(file);input.value='';
+}
+
+function renderXlList(){
+  document.getElementById('xl-list').innerHTML=xlItems.map(item=>{
+    const s=selXl.has(item)?' sel':'';
+    const safe=item.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return`<div class="xl-item${s}" onclick="toggleXl('${safe}',this)">${item}</div>`;
+  }).join('');
+}
+
+function renderColoredList(){
+  const list=document.getElementById('xl-colored-list');
+  if(!coloredItems.length){
+    list.innerHTML='<div style="font-size:11px;color:#aaa;padding:4px">色付きセルが検出されませんでした</div>';
+    return;
+  }
+  list.innerHTML=coloredItems.map(item=>{
+    const s=selXl.has(item.value)?' sel':'';
+    const safe=item.value.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return`<div class="xl-colored-item${s}" onclick="toggleXl('${safe}',this)">
+      <div class="swatch" style="background:${item.hexColor}"></div>
+      ${item.value}
+    </div>`;
+  }).join('');
+}
+
+function toggleXl(item,el){
+  if(selXl.has(item)){selXl.delete(item);el.classList.remove('sel');}
+  else{selXl.add(item);el.classList.add('sel');}
+  if(selXl.size>0) toast(`「${[...selXl][0]}」を選択 — セルをクリックして配置`);
+}
+
+function bulkPlace(mode){
+  const vals = mode==='colored'
+    ? coloredItems.map(item=>item.value)
+    : xlItems;
+  if(!vals.length){toast('データがありません');return;}
+
+  // 行方向の順序（スキップ列を除く）
+  const ord=orderedCells('row');
+
+  // 開始セルを選択してもらう
+  if(!sel){
+    toast('開始セルをクリックしてから「一括配置」を押してください');
+    pendingBulk=mode;
+    return;
+  }
+
+  let si=sel.si;
+  let idx=ord.indexOf(sel.pos);
+  if(idx<0) idx=0;
+
+  vals.forEach(v=>{
+    if(idx>=ord.length){si++;idx=0;}
+    if(si>=n) return;
+    if(!D[si]) D[si]={};
+    D[si][ord[idx]]={main:v};
+    idx++;
+  });
+
+  sel=null;
+  pendingBulk=null;
+  selXl=new Set();
+  renderXlList();
+  renderColoredList();
+  render();
+  showHint(`${vals.length}件を一括配置しました（行方向）`);
+}
+
+let pendingBulk=null;
+
+// ── モーダル ──
+function openMod(si,pos){
+  et={si,pos};
+  const d=D[si]?.[pos];
+  document.getElementById('minp').value=d?.main||'';
+  document.getElementById('mtitle').textContent=`セル ${pos}（ボックス ${si+1}）`;
+  document.getElementById('ov').classList.add('open');
+  setTimeout(()=>document.getElementById('minp').focus(),50);
+}
+function closeMod(){document.getElementById('ov').classList.remove('open');et=null;}
+function ovClick(e){if(e.target===document.getElementById('ov'))closeMod();}
+function saveCell(){
+  if(!et)return;const{si,pos}=et;
+  if(!D[si])D[si]={};
+  const v=document.getElementById('minp').value.trim();
+  if(v)D[si][pos]={main:v};else delete D[si][pos];
+  closeMod();render();
+}
+function clrCell(){if(!et)return;const{si,pos}=et;if(D[si])delete D[si][pos];closeMod();render();}
+function clearAll(){if(!confirm('全消去しますか？'))return;D={};sel=null;selXl=new Set();for(let i=0;i<n;i++)D[i]={};renderXlList();render();}
+
+document.addEventListener('keydown',e=>{
+  const ov=document.getElementById('ov').classList.contains('open');
+  if(ov){if(e.key==='Enter')saveCell();if(e.key==='Escape')closeMod();return;}
+  if(e.key==='Escape'){sel=null;selXl=new Set();renderXlList();render();}
+  if((e.key==='Delete'||e.key==='Backspace')&&sel&&!document.activeElement.isContentEditable){
+    const{si,pos}=sel;if(D[si])delete D[si][pos];render();
+  }
+});
+
+function showHint(msg){
+  const h=document.getElementById('hint');
+  h.innerHTML=`📋 <b>${msg}</b>`;h.classList.add('show');
+  clearTimeout(h._t);h._t=setTimeout(()=>h.classList.remove('show'),4000);
+}
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── 色管理 ──
+const SC_COLORS=[
+  '#dce8f8','#fde8dc','#dcf4dc','#f0dcf8',
+  '#faf0dc','#dcf4f0','#f8dcdc','#f0f4dc'
+];
+const SC_BORDER=[
+  '#5a8fc2','#e07b5a','#3fb950','#c080d8',
+  '#e8a030','#20a090','#e06080','#a0b830'
+];
+let strainColorMap={};// 株名→カラーインデックス
+let colorIdx=0;
+
+function getStrainColor(strain){
+  if(!strain) return -1;
+  if(strainColorMap[strain]===undefined){
+    strainColorMap[strain]=colorIdx%8;
+    colorIdx++;
+    renderLegend();
+  }
+  return strainColorMap[strain];
+}
+
+function renderLegend(){
+  const leg=document.getElementById('legend');
+  const entries=Object.entries(strainColorMap);
+  if(!entries.length){
+    leg.innerHTML='<span class="legend-empty">株名を入力すると色が自動で付きます</span>';
+    return;
+  }
+  leg.innerHTML=entries.map(([strain,ci])=>`
+    <div class="legend-item" style="background:${SC_COLORS[ci]};border-color:${SC_BORDER[ci]}">
+      <div class="legend-dot" style="background:${SC_BORDER[ci]}"></div>
+      <span style="font-weight:600;color:#1c1c2e">${strain}</span>
+    </div>`).join('');
+}
+function getFiltered(){
+  const strainQ=document.getElementById('strain-filter').value.trim().toLowerCase();
+  const results=[];
+  for(let si=0;si<n;si++){
+    const cb=document.getElementById(`box-cb-${si}`);
+    if(cb&&!cb.checked) continue;
+    const box=D[si]||{};
+    Object.entries(box).forEach(([pos,d])=>{
+      if(!d?.main) return;
+      if(strainQ&&!d.main.toLowerCase().includes(strainQ)) return;
+      const ci=strainColorMap[d.main]??-1;
+      if(filterColors.size>0&&!filterColors.has(ci)) return;
+      results.push({box:si+1,pos,main:d.main,ci});
+    });
+  }
+  results.sort((a,b)=>a.box-b.box||a.pos.localeCompare(b.pos));
+  return results;
+}
+let filterColors=new Set();
+
+function openExtract(){
+  filterColors=new Set();
+  const checks=document.getElementById('box-checks');
+  checks.innerHTML='';
+  for(let si=0;si<n;si++){
+    const lbl=document.createElement('label');
+    lbl.style.cssText='font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer';
+    const cb=document.createElement('input');
+    cb.type='checkbox';cb.id=`box-cb-${si}`;cb.checked=true;
+    cb.onchange=()=>{renderExtTable();syncBoxAll();};
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(`ボックス${si+1}`));
+    checks.appendChild(lbl);
+  }
+  // 色チップ生成
+  const chips=document.getElementById('color-chips');
+  chips.innerHTML='';
+  const allChip=document.createElement('div');
+  allChip.className='color-chip chip-all active';allChip.id='chip-all';allChip.textContent='全色';
+  allChip.onclick=()=>{filterColors=new Set();document.querySelectorAll('.color-chip').forEach(c=>c.classList.remove('active'));allChip.classList.add('active');renderExtTable();};
+  chips.appendChild(allChip);
+  Object.entries(strainColorMap).forEach(([strain,ci])=>{
+    const chip=document.createElement('div');
+    chip.className='color-chip';chip.title=strain;
+    chip.style.background=SC_COLORS[ci];chip.style.borderColor=SC_BORDER[ci];
+    chip.onclick=()=>{
+      document.getElementById('chip-all').classList.remove('active');
+      if(filterColors.has(ci)){filterColors.delete(ci);chip.classList.remove('active');}
+      else{filterColors.add(ci);chip.classList.add('active');}
+      if(filterColors.size===0){document.getElementById('chip-all').classList.add('active');}
+      renderExtTable();
+    };
+    chips.appendChild(chip);
+  });
+  document.getElementById('strain-filter').value='';
+  document.getElementById('strain-filter').oninput=renderExtTable;
+  renderExtTable();
+  document.getElementById('ext-ov').classList.add('open');
+}
+
+function renderExtTable(){
+  const rows=getFiltered();
+  document.getElementById('ext-count').textContent=`${rows.length}件`;
+  const tbody=document.getElementById('ext-tbody');
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="4" style="color:#aaa;padding:12px">該当なし</td></tr>';
+    return;
+  }
+  tbody.innerHTML=rows.map(r=>{
+    const bg=r.ci>=0?SC_COLORS[r.ci]:'#f8f8f8';
+    const bd=r.ci>=0?SC_BORDER[r.ci]:'#ccc';
+    return`<tr>
+      <td>ボックス${r.box}</td>
+      <td>${r.pos}</td>
+      <td style="font-weight:600">${r.main}</td>
+      <td><div style="width:14px;height:14px;border-radius:3px;background:${bg};border:2px solid ${bd};margin:auto"></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleBoxAll(){
+  const all=document.getElementById('box-all').checked;
+  for(let si=0;si<n;si++){
+    const cb=document.getElementById(`box-cb-${si}`);
+    if(cb) cb.checked=all;
+  }
+  renderExtTable();
+}
+
+function syncBoxAll(){
+  let allChecked=true;
+  for(let si=0;si<n;si++){
+    const cb=document.getElementById(`box-cb-${si}`);
+    if(cb&&!cb.checked){allChecked=false;break;}
+  }
+  document.getElementById('box-all').checked=allChecked;
+}
+
+function closeExtract(){document.getElementById('ext-ov').classList.remove('open');}
+function extOvClick(e){if(e.target===document.getElementById('ext-ov'))closeExtract();}
+
+function downloadCSV(){
+  const rows=getFiltered();
+  if(!rows.length){alert('データがありません');return;}
+  const lines=['box,position,strain_name',...rows.map(r=>`${r.box},${r.pos},"${r.main}"`)];
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`samplebox_extract_${today()}.csv`;a.click();
+}
+
+function downloadXL(){
+  const rows=getFiltered();
+  if(!rows.length){alert('データがありません');return;}
+  const ws=XLSX.utils.aoa_to_sheet([
+    ['box','position','strain_name'],
+    ...rows.map(r=>[`ボックス${r.box}`,r.pos,r.main])
+  ]);
+  ws['!cols']=[{wch:12},{wch:10},{wch:20}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'extracted');
+  XLSX.writeFile(wb,`samplebox_extract_${today()}.xlsx`);
+}
+
+function today(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
+
+build();
+</script>
+</body>
+</html>
